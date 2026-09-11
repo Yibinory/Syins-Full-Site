@@ -1,0 +1,22 @@
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+WORKDIR /app
+
+RUN apt-get update \
+    && apt-get install --no-install-recommends -y ca-certificates libpq5 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt ./requirements.txt
+RUN pip install -r requirements.txt
+
+COPY backend ./backend
+COPY docker/entrypoint.sh ./docker/entrypoint.sh
+RUN chmod +x ./docker/entrypoint.sh \
+    && mkdir -p /app/data/database /app/data/uploads /app/data/backups /app/data/static
+
+WORKDIR /app/backend
+ENTRYPOINT ["/app/docker/entrypoint.sh"]

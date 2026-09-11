@@ -1,0 +1,52 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-research_os}
+      POSTGRES_USER: ${POSTGRES_USER:-research_os}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-research_os}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-research_os}}
+      MEDIA_ROOT: /app/data/uploads
+      STATIC_ROOT: /app/data/static
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - media_data:/app/data/uploads
+      - backup_data:/app/data/backups
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api/v1}
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "${APP_PORT:-8080}:80"
+    volumes:
+      - media_data:/app/data/uploads:ro
+
+volumes:
+  postgres_data:
+  media_data:
+  backup_data:
