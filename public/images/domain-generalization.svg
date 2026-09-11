@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500">
+  <rect width="800" height="500" fill="#eef0ed"/>
+  <g fill="none" stroke="#7b8d9a" stroke-width="2">
+    <path d="M220 160L386 248M220 340L386 252M450 250H590"/>
+    <rect x="60" y="100" width="180" height="110" rx="8"/>
+    <rect x="60" y="290" width="180" height="110" rx="8"/>
+    <circle cx="410" cy="250" r="60"/>
+    <rect x="590" y="195" width="160" height="110" rx="8" stroke-dasharray="6 6"/>
+  </g>
+  <g font-family="Arial, sans-serif" text-anchor="middle" fill="#243d55">
+    <text x="150" y="149" font-size="21">Hospital A</text><text x="150" y="177" font-size="14">Source domain</text>
+    <text x="150" y="339" font-size="21">Hospital B</text><text x="150" y="367" font-size="14">Source domain</text>
+    <text x="410" y="246" font-size="17">Shared</text><text x="410" y="270" font-size="17">model</text>
+    <text x="670" y="243" font-size="21">Hospital C</text><text x="670" y="272" font-size="14">Unseen domain</text>
+    <text x="400" y="455" font-size="14" letter-spacing="2">DOMAIN GENERALIZATION</text>
+  </g>
+</svg>

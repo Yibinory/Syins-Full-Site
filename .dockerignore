@@ -1,0 +1,17 @@
+.git
+.gitignore
+node_modules
+.pnpm-store
+.venv
+__pycache__
+*.pyc
+*.sqlite3
+.env
+data/database
+data/static
+data/uploads
+data/backups
+dist
+.DS_Store
+sever_p.txt
+server_p.txt
