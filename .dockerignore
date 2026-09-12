@@ -15,3 +15,4 @@ dist
 .DS_Store
 sever_p.txt
 server_p.txt
+data/host-metrics

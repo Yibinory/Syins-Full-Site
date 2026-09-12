@@ -25,7 +25,9 @@ class TagNamesField(serializers.ListField):
 def set_tag_names(instance, names):
     tags = []
     for name in names:
-        tag, _ = Tag.objects.get_or_create(name=name)
+        tag = Tag.objects.filter(name__iexact=name).first()
+        if tag is None:
+            tag = Tag.objects.create(name=name)
         tags.append(tag)
     instance.tags.set(tags)
 
@@ -85,9 +87,40 @@ class MediaAssetSerializer(serializers.ModelSerializer):
 
 
 class TagSerializer(serializers.ModelSerializer):
+    parentId = serializers.PrimaryKeyRelatedField(source="parent", queryset=Tag.objects.all(), allow_null=True, required=False)
+    updatedAt = serializers.DateTimeField(source="updated_at", read_only=True)
+
     class Meta:
         model = Tag
-        fields = ["id", "name", "slug"]
+        fields = ["id", "name", "slug", "color", "description", "parentId", "updatedAt"]
+        read_only_fields = ["slug"]
+
+    def validate_color(self, value):
+        value = value.strip().upper()
+        if not value.startswith("#") or len(value) != 7 or any(character not in "0123456789ABCDEF" for character in value[1:]):
+            raise serializers.ValidationError("Use a six-digit hexadecimal color such as #5C7891.")
+        return value
+
+    def validate_name(self, value):
+        value = " ".join(value.strip().split())
+        queryset = Tag.objects.filter(name__iexact=value)
+        if self.instance is not None:
+            queryset = queryset.exclude(pk=self.instance.pk)
+        if queryset.exists():
+            raise serializers.ValidationError("A tag with this name already exists.")
+        return value
+
+    def validate_parentId(self, value):
+        instance = self.instance
+        if value is not None and instance is not None:
+            if value.pk == instance.pk:
+                raise serializers.ValidationError("A tag cannot be its own parent.")
+            ancestor = value
+            while ancestor is not None:
+                if ancestor.pk == instance.pk:
+                    raise serializers.ValidationError("Tag hierarchy cannot contain a cycle.")
+                ancestor = ancestor.parent
+        return value
 
 
 class WorkspaceSettingsSerializer(serializers.ModelSerializer):

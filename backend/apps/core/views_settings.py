@@ -32,15 +32,19 @@ def backup_download(request):
     from apps.content.serializers import CurrentResearchItemSerializer, ResearchProjectSerializer, SiteProfileSerializer
     from apps.documents.models import Document
     from apps.documents.serializers import DocumentSerializer
+    from apps.integrations.models import EmbeddedPage
+    from apps.integrations.serializers import EmbeddedPageSerializer
     from apps.papers.models import RecommendedPaper
     from apps.papers.serializers import RecommendedPaperSerializer
     from apps.publications.models import Publication
     from apps.publications.serializers import PublicationSerializer
-    from apps.servers.models import Server
-    from apps.servers.serializers import ServerSerializer
+    from apps.servers.models import Server, ServerMetricSample
+    from apps.servers.serializers import ServerMetricSampleSerializer, ServerSerializer
+    from .models import Tag
+    from .serializers import TagSerializer
 
     records = {
-        "version": 1,
+        "version": 2,
         "exportedAt": timezone.now().isoformat(),
         "site": SiteProfileSerializer(SiteProfile.get_solo()).data,
         "selectedProjects": ResearchProjectSerializer(ResearchProject.objects.all(), many=True).data,
@@ -49,6 +53,9 @@ def backup_download(request):
         "documents": DocumentSerializer(Document.objects.prefetch_related("tags"), many=True).data,
         "papers": RecommendedPaperSerializer(RecommendedPaper.objects.prefetch_related("tags", "notes"), many=True).data,
         "servers": ServerSerializer(Server.objects.all(), many=True).data,
+        "serverMetrics": ServerMetricSampleSerializer(ServerMetricSample.objects.all(), many=True).data,
+        "tags": TagSerializer(Tag.objects.select_related("parent").all(), many=True).data,
+        "integrations": EmbeddedPageSerializer(EmbeddedPage.objects.all(), many=True).data,
         "settings": WorkspaceSettingsSerializer(WorkspaceSettings.get_solo()).data,
     }
     output = BytesIO()

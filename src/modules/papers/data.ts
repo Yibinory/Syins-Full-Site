@@ -1,5 +1,5 @@
 export type PaperStatus = 'recommended' | 'to_read' | 'reading' | 'read' | 'ignored' | 'important'
-export interface Paper { id: number; title: string; authors: string; venue: string; year: number; topic: string; tags: string[]; status: PaperStatus; recommendedAt: string; reason: string; abstract: string; rating?: number; doi?: string; arxivId?: string }
+export interface Paper { id: number; title: string; authors: string; venue: string; year: number; topic: string; tags: string[]; status: PaperStatus; recommendedAt: string; reason: string; abstract: string; rating?: number; doi?: string; arxivId?: string; paperUrl?: string; publiclyVisible?: boolean }
 export const paperStatusMeta: Record<PaperStatus, { label: string; tone: 'neutral' | 'success' | 'warning' | 'info' }> = {
   recommended: { label: 'Recommended', tone: 'neutral' }, to_read: { label: 'To read', tone: 'info' }, reading: { label: 'Reading', tone: 'warning' }, read: { label: 'Read', tone: 'success' }, ignored: { label: 'Ignored', tone: 'neutral' }, important: { label: 'Important', tone: 'warning' },
 }
@@ -10,4 +10,3 @@ export const papers: Paper[] = [
   { id: 28, title: 'Latent Disease Trajectories from Sparse Clinical Imaging', authors: 'Park et al.', venue: 'TMI', year: 2025, topic: 'Disease Progression', tags: ['Trajectory', 'CT', 'Survival'], status: 'to_read', recommendedAt: 'Aug 29, 2026', reason: 'Connects time-to-event modeling with imaging representations.', abstract: 'Latent variable models align irregular clinical observations into disease progression trajectories.' },
   { id: 27, title: 'Segment Anything in Medical Images', authors: 'Ma et al.', venue: 'Nature Communications', year: 2024, topic: 'Medical Image Analysis', tags: ['Foundation Model', 'Segmentation'], status: 'read', recommendedAt: 'Aug 18, 2026', reason: 'Relevant foundation model baseline.', abstract: 'A promptable segmentation foundation model adapted across medical imaging modalities.', rating: 4 },
 ]
-

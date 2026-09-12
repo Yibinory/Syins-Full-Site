@@ -12,16 +12,19 @@
 - `publications`：正式发表成果、链接、BibTeX、精选标记、标签和媒体引用。
 - `documents`：Markdown 文档、公开性、精选标记、标签和可恢复 Trash。
 - `papers`：推荐论文、阅读状态、DOI/arXiv 去重、标签，以及与文档的多对多关系。
-- `servers`：机器清单、资源快照、能力标签、连接器配置和启用状态。
-- `core`：`MediaAsset`、`Tag`、`WorkspaceSettings`、审计事件和服务器动作日志。
+- `servers`：主机清单、primary 标记、SSH 连接、当前资源快照、历史指标样本、能力标签和审计动作。
+- `integrations`：Dashboard 外部页面的 URL 和展示元数据，例如 3x-ui 面板入口。
+- `core`：`MediaAsset`、带颜色/描述/层级的 `Tag`、`WorkspaceSettings`、审计事件和服务器动作日志。
 
 记录之间通过外键或多对多关系关联；媒体文件不直接嵌入业务表，只保存 `MediaAsset` 引用。所有 schema 变化必须通过 Django migration 提交。
 
 ## API 约定
 
-API 固定在 `/api/v1/` 下，并返回前端使用的 camelCase 字段。公开读取和私有编辑在权限层明确分开：公开站点只读取公开内容；推荐论文、设置、媒体管理、服务器清单和所有写操作需要登录。`unlisted` 文档可以通过精确 slug 访问，但不会出现在公开列表中； Trash 通过显式 `?trash=1` 读取。
+API 固定在 `/api/v1/` 下，并返回前端使用的 camelCase 字段。列表统一支持 DRF 分页和白名单 `ordering`，页面通过状态过滤和时间排序表达时间范围，不建立“近期”专用表。公开读取和私有编辑在权限层明确分开：公开站点只读取公开内容；推荐论文管理、设置、媒体管理、服务器清单和所有写操作需要登录。`unlisted` 文档可以通过精确 slug 访问，但不会出现在公开列表中； Trash 通过显式 `?trash=1` 读取。
 
-服务器动作不是任意命令接口，而是固定动作集合。当前 `mock` connector 只更新快照；SSH、Docker Remote 和 3x-ui 应作为独立 provider 接入，并在有凭据、权限和测试后再开放远程写操作。
+服务器动作不是任意命令接口，而是固定动作集合。`mock` connector 用于演示快照；SSH 在主机指纹显式确认后执行固定的只读指标脚本，并将每次成功采集写入历史样本。容器和日志远程写操作仍未开放。3x-ui 等面板通过 Dashboard 外部页面嵌入，不由 Django 代理或代替其登录。
+
+Markdown 文档支持工作台直接上传 UTF-8 `.md`/`.markdown` 文件，公开推荐论文有独立的按推荐日期排序页面，并在服务端控制关联私有 Note 的登录可见性。
 
 ## 媒体与交互内容
 

@@ -87,6 +87,7 @@ export const useSiteContentStore = defineStore('site-content', () => {
     currentResearch: persisted.currentResearch ?? structuredClone(defaults.currentResearch),
   })
   const lastSavedAt = ref(localStorage.getItem('research-os:site-content-saved-at') ?? '')
+  const apiLoaded = ref(false)
   const hydrated = ref(false)
   const saving = ref(false)
 
@@ -95,6 +96,7 @@ export const useSiteContentStore = defineStore('site-content', () => {
     try {
       const response = await http.get<SiteContent>('/site/content/')
       content.value = response.data
+      apiLoaded.value = true
       saveLocalStorageJson('research-os:site-content', content.value)
     } catch {
       // Keeping the last local draft makes the site usable while the API is temporarily offline.
@@ -125,5 +127,5 @@ export const useSiteContentStore = defineStore('site-content', () => {
     await save()
   }
 
-  return { content, lastSavedAt, hydrated, saving, hydrate, save, reset }
+  return { apiLoaded, content, lastSavedAt, hydrated, saving, hydrate, save, reset }
 })

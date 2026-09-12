@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import LanguageSwitch from '@/components/shared/LanguageSwitch.vue'
 import { ArrowLeft, ArrowRight, LockKeyhole } from 'lucide-vue-next'
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -20,20 +21,20 @@ async function submit() {
 </script>
 
 <template>
-  <main class="login-page">
-    <RouterLink to="/" class="login-back"><ArrowLeft :size="16" /> Public site</RouterLink>
+  <main class="login-page"><div class="login-language"><LanguageSwitch /></div>
+    <RouterLink to="/" class="login-back"><ArrowLeft :size="16" /> {{ $t("Public site") }}</RouterLink>
     <section class="login-panel">
       <div class="login-mark"><LockKeyhole :size="19" /></div>
-      <p class="login-kicker">Private workspace</p>
-      <h1>Research OS</h1>
-      <p class="login-copy">Your literature, research, servers, and working documents in one quiet place.</p>
+      <p class="login-kicker">{{ $t("Private workspace") }}</p>
+      <h1>{{ $t("Research OS") }}</h1>
+      <p class="login-copy">{{ $t("Your literature, research, servers, and working documents in one quiet place.") }}</p>
       <form @submit.prevent="submit">
-        <label>Email<input v-model="email" type="email" autocomplete="username" placeholder="Administrator email" /></label>
-        <label>Password<input v-model="password" type="password" autocomplete="current-password" placeholder="Password" /></label>
-        <p v-if="error" class="form-error">{{ error }}</p>
-        <AppButton type="submit">Enter workspace <ArrowRight :size="16" /></AppButton>
+        <label>{{ $t("Email") }}<input v-model="email" type="email" autocomplete="username" :placeholder="$t('Administrator email')" /></label>
+        <label>{{ $t("Password") }}<input v-model="password" type="password" autocomplete="current-password" :placeholder="$t('Password')" /></label>
+        <p v-if="error" class="form-error">{{ $t(error) }}</p>
+        <AppButton type="submit">{{ $t("Enter workspace") }} <ArrowRight :size="16" /></AppButton>
       </form>
-      <p class="demo-note">Sign in with the administrator account configured during deployment.</p>
+      <p class="demo-note">{{ $t("Sign in with the administrator account configured during deployment.") }}</p>
     </section>
   </main>
 </template>

@@ -1,6 +1,7 @@
 from django.db.models import Q
 from rest_framework import viewsets
 
+from apps.core.query import apply_safe_ordering
 from apps.core.permissions import ReadOnlyOrAuthenticated
 
 from .models import Publication
@@ -23,4 +24,9 @@ class PublicationViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(type=publication_type)
         if tag:
             queryset = queryset.filter(tags__name__iexact=tag)
-        return queryset.distinct()
+        return apply_safe_ordering(
+            queryset.distinct(),
+            self.request.query_params.get("ordering"),
+            {"year", "id", "created_at", "updated_at", "title"},
+            ("-year", "-id"),
+        )

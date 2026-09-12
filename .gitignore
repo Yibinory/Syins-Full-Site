@@ -17,3 +17,4 @@ data/backups/*
 !data/backups/.gitkeep
 sever_p.txt
 server_p.txt
+data/host-metrics/

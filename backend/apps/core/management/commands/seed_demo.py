@@ -106,7 +106,7 @@ class Command(BaseCommand):
             (27, "Segment Anything in Medical Images", "Ma et al.", "Nature Communications", 2024, "Medical Image Analysis", "read", "Aug 18, 2026", "Relevant foundation model baseline.", "A promptable segmentation foundation model adapted across medical imaging modalities.", 4, "", "", ["Foundation Model", "Segmentation"]),
         ]
         for paper_id, title, authors, venue, year, topic, paper_status, recommended_at, reason, abstract, rating, doi, arxiv_id, tags in paper_data:
-            paper, created = RecommendedPaper.objects.get_or_create(id=paper_id, defaults={"title": title, "authors": authors, "venue": venue, "year": year, "topic": topic, "status": paper_status, "recommended_at": date.fromisoformat(self.parse_paper_date(recommended_at)), "reason": reason, "abstract": abstract, "rating": rating, "doi": doi, "arxiv_id": arxiv_id, "paper_url": "https://arxiv.org/abs/{}".format(arxiv_id) if arxiv_id else ""})
+            paper, created = RecommendedPaper.objects.get_or_create(id=paper_id, defaults={"title": title, "authors": authors, "venue": venue, "year": year, "topic": topic, "status": paper_status, "recommended_at": date.fromisoformat(self.parse_paper_date(recommended_at)), "reason": reason, "abstract": abstract, "rating": rating, "doi": doi, "arxiv_id": arxiv_id, "paper_url": "https://arxiv.org/abs/{}".format(arxiv_id) if arxiv_id else "", "publicly_visible": True})
             if created:
                 self.set_tags(paper, tags)
 
@@ -117,7 +117,7 @@ class Command(BaseCommand):
             (4, "Old-Workstation", "ws03.lab.local", "10.10.0.23", "Legacy analysis node", "Lab · Desk 3", "Ubuntu 20.04", "offline", ["SSH", "NVIDIA_GPU"], 0, {"used": 0, "total": 64}, {"used": 1.4, "total": 2}, [{"name": "RTX 3090", "utilization": 0, "memory": "—", "temperature": 0}], 0),
         ]
         for server_id, name, hostname, ip, description, location, os_name, server_status, capabilities, cpu, memory, disk, gpus, containers in servers:
-            Server.objects.get_or_create(id=server_id, defaults={"name": name, "hostname": hostname, "ip": ip, "description": description, "location": location, "os": os_name, "status": server_status, "provider": "mock", "uptime": "—" if server_status == "offline" else "38 days", "capabilities": capabilities, "cpu": cpu, "memory": memory, "disk": disk, "gpus": gpus, "containers": containers, "enabled": True})
+            Server.objects.get_or_create(id=server_id, defaults={"name": name, "hostname": hostname, "ip": ip, "description": description, "location": location, "os": os_name, "status": server_status, "provider": "mock", "is_primary": server_id == 1, "uptime": "—" if server_status == "offline" else "38 days", "capabilities": capabilities, "cpu": cpu, "memory": memory, "disk": disk, "gpus": gpus, "containers": containers, "enabled": True})
 
         # Several legacy demo records keep their visible numeric ids. Reset the
         # database sequences so the next user-created record cannot collide.

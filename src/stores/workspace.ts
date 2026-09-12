@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, toRaw } from 'vue'
 import { http } from '@/services/http'
 import { listData, localStorageJson, saveLocalStorageJson } from '@/services/api'
 import { useAuthStore } from './auth'
@@ -38,6 +38,7 @@ export interface WorkspaceSettings {
   siteTitle: string
   updatedAt?: string
 }
+export interface WorkspaceTag { id: number; name: string; slug: string; color: string; description: string; parentId: number | null; updatedAt?: string }
 
 export const normalizeTags = (tags: string[]) => [...new Map(tags.map(t => t.trim()).filter(Boolean).map(t => [t.toLowerCase(), t])).values()]
 export const newId = () => Date.now() + Math.floor(Math.random() * 1000)
@@ -45,7 +46,7 @@ export const today = () => new Date().toISOString().slice(0, 10)
 
 const seededPapers = paperSeeds.map(p => ({ ...structuredClone(p), noteIds: [], paperUrl: p.arxivId ? `https://arxiv.org/abs/${p.arxivId}` : '' }))
 const seededPublications = publicationSeeds.map(p => ({ ...structuredClone(p), slug: undefined, motivation: '', approach: '', abstract: '', paperUrl: '', codeUrl: '', projectUrl: '', bibtex: '', mediaType: 'image' as const, mediaUrl: p.image || '', mediaAlt: p.title, caption: '', mediaAssetId: undefined }))
-const seededDocuments = publicNotes.map(n => ({ ...structuredClone(n), content: `# ${n.title}\n\n${n.excerpt}`, visibility: 'public' as const, updatedAt: n.publishedAt, trashedAt: null }))
+const seededDocuments = publicNotes.map(n => ({ ...structuredClone(n), content: `# ${n.title}\n\n${n.excerpt}`, visibility: 'public' as const, updatedAt: n.publishedAt || today(), trashedAt: null }))
 const defaultSettings: WorkspaceSettings = { defaultNoteVisibility: 'private', defaultNoteKind: 'Research Note', pageSize: 20, siteTitle: 'Research OS' }
 
 function replaceRecord<T extends { id: number }>(records: T[], value: T) {
@@ -59,7 +60,9 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   const publications = ref<ManagedPublication[]>(localStorageJson('research-os:publications', structuredClone(seededPublications)))
   const documents = ref<Document[]>(localStorageJson('research-os:documents', structuredClone(seededDocuments)))
   const servers = ref<Server[]>([])
+  const tags = ref<WorkspaceTag[]>([])
   const settings = ref<WorkspaceSettings>(localStorageJson('research-os:preferences', structuredClone(defaultSettings)))
+  const apiLoaded = ref(false)
   const hydrated = ref(false)
   const offline = ref(false)
 
@@ -86,6 +89,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
           http.get<Document[] | { results?: Document[] }>('/docs/?page_size=200'),
           http.get<Document[] | { results?: Document[] }>('/docs/?trash=1&page_size=200'),
           http.get<Server[] | { results?: Server[] }>('/servers/?page_size=200'),
+          http.get<WorkspaceTag[] | { results?: WorkspaceTag[] }>('/tags/?page_size=200'),
           http.get<WorkspaceSettings>('/settings/'),
         ])
         papers.value = listData<ManagedPaper>(privateResponses[0].data)
@@ -93,12 +97,15 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         const trashedDocuments = listData<Document>(privateResponses[2].data)
         documents.value = [...activeDocuments, ...trashedDocuments.filter((trash) => !activeDocuments.some((active) => active.id === trash.id))]
         servers.value = listData<Server>(privateResponses[3].data)
-        settings.value = privateResponses[4].data
+        tags.value = listData<WorkspaceTag>(privateResponses[4].data)
+        settings.value = privateResponses[5].data
       } else {
         papers.value = []
         servers.value = []
       }
+      apiLoaded.value = true
     } catch {
+      apiLoaded.value = false
       offline.value = true
       // The old browser records remain a useful migration fallback if the API is not running yet.
     } finally {
@@ -137,20 +144,29 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       papers.value = papers.value.filter(item => item.id !== value.id)
       papers.value.unshift(response.data)
       return response.data
-    } catch {
+    } catch (error) {
+      if ((error as Error & { response?: { status?: number } }).response?.status === 409) {
+        papers.value = papers.value.filter(item => item.id !== value.id)
+        throw error
+      }
       persistFallback()
       return value
     }
   }
 
   async function updatePaper(value: ManagedPaper) {
+    const current = papers.value.find(item => item.id === value.id)
+    const snapshot = current ? structuredClone(toRaw(current)) : null
     try {
       const response = await http.patch<ManagedPaper>(`/papers/${value.id}/`, value)
-      const current = papers.value.find(item => item.id === value.id)
       if (current) Object.assign(current, response.data)
       else papers.value.unshift(response.data)
       return response.data
-    } catch {
+    } catch (error) {
+      if ((error as Error & { response?: { status?: number } }).response?.status === 409) {
+        if (current && snapshot) Object.assign(current, snapshot)
+        throw error
+      }
       persistFallback()
       return value
     }
@@ -160,8 +176,8 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     const normalized = structuredClone(value)
     normalized.tags = normalizeTags(normalized.tags)
     normalized.updatedAt = today()
-    normalized.displayDate = normalized.publishedAt
-    normalized.excerpt = normalized.summary
+    normalized.displayDate = normalized.publishedAt || 'Draft'
+    if (!documents.value.some(item => item.id === normalized.id) && !normalized.excerpt) normalized.excerpt = normalized.summary
     normalized.readingTime = `${Math.max(1, Math.ceil(normalized.content.length / 1000))} min`
     const existing = documents.value.find(item => item.id === normalized.id)
     replaceRecord(documents.value, normalized)
@@ -176,6 +192,17 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       persistFallback()
       return normalized
     }
+  }
+
+  async function uploadMarkdown(file: File, fields: Record<string, string | boolean | undefined> = {}) {
+    const response = await http.post<Document>('/docs/upload/', (() => {
+      const form = new FormData()
+      form.append('file', file)
+      Object.entries(fields).forEach(([key, value]) => { if (value !== undefined) form.append(key, String(value)) })
+      return form
+    })())
+    replaceRecord(documents.value, response.data)
+    return response.data
   }
 
   async function linkNote(paperId: number, noteId: number, linked: boolean) {
@@ -212,7 +239,26 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   async function renameTag(from: string, to: string) {
     for (const item of [...papers.value, ...publications.value, ...documents.value]) item.tags = normalizeTags(item.tags.flatMap(tag => tag.toLowerCase() === from.toLowerCase() ? (to.trim() ? [to.trim()] : []) : [tag]))
     try { await http.post('/tags/rename/', { from, to }) } catch { /* local fallback below */ }
+    const matching = tags.value.find(tag => tag.name.toLowerCase() === from.toLowerCase())
+    if (matching) {
+      if (to.trim()) matching.name = to.trim()
+      else tags.value = tags.value.filter(tag => tag.id !== matching.id)
+    }
     persistFallback()
+  }
+
+  async function saveTag(value: WorkspaceTag) {
+    const response = await http.patch<WorkspaceTag>(`/tags/${value.id}/`, value)
+    const index = tags.value.findIndex(tag => tag.id === value.id)
+    if (index === -1) tags.value.push(response.data)
+    else tags.value[index] = response.data
+    return response.data
+  }
+
+  async function createTag(value: Partial<WorkspaceTag>) {
+    const response = await http.post<WorkspaceTag>('/tags/', value)
+    tags.value.push(response.data)
+    return response.data
   }
 
   async function saveSettings() {
@@ -223,16 +269,17 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   }
 
   async function refreshServers() {
-    try {
-      const response = await http.post<Server[] | { results?: Server[] }>('/servers/refresh/')
-      servers.value = listData<Server>(response.data)
-    } catch {
-      // The dashboard keeps the last known snapshot when a connector is unavailable.
+    const response = await http.post<Server[] | { results?: Server[] }>('/servers/refresh/')
+    const updated = listData<Server>(response.data)
+    for (const server of updated) {
+      const index = servers.value.findIndex(item => item.id === server.id)
+      if (index === -1) servers.value.push(server)
+      else servers.value[index] = server
     }
     return servers.value
   }
 
-  async function createServer(value: Partial<Server>) {
+  async function createServer(value: Partial<Server> & { password?: string }) {
     try {
       const response = await http.post<Server>('/servers/', value)
       servers.value = [response.data, ...servers.value]
@@ -243,8 +290,8 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   }
 
   return {
-    papers, publications, documents, servers, settings, hydrated, offline,
+    papers, publications, documents, servers, tags, settings, hydrated, offline, apiLoaded,
     hydrate, savePublication, deletePublication, createPaper, updatePaper, saveDocument,
-    linkNote, trashDocument, restoreDocument, renameTag, saveSettings, refreshServers, createServer,
+    linkNote, trashDocument, restoreDocument, uploadMarkdown, renameTag, saveTag, createTag, saveSettings, refreshServers, createServer,
   }
 })

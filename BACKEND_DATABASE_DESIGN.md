@@ -16,7 +16,7 @@ Syins Research OS 同时承担两个边界清晰的职责：
 - 公开读取、私有工作台和基础设施操作在权限层显式分离。
 - 浏览器使用同源 Session + CSRF，不在前端保存长期 API token。
 - 数据库 schema 只通过 Django migration 演进；应用容器可以替换，数据 volume 不替换。
-- 服务器动作必须是白名单动作，不提供任意 shell 执行接口。
+- 服务器采集和动作必须经过 connector 白名单，不提供任意 shell 执行接口。
 - 现在保持单用户、单实例和简单部署；未来扩展时尽量保持现有 API 和实体稳定。
 
 ## 2. 系统架构
@@ -92,8 +92,9 @@ migration 必须向前兼容已有数据。需要删除或重命名字段时，�
 | `content` | 主页单例资料、当前研究、精选研究项目 | `SiteProfile`、`CurrentResearchItem`、`ResearchProject` | GET 公开；CMS 写入需要登录 |
 | `publications` | 正式论文和预印本 | `Publication` | GET 公开；创建、修改、删除需要登录 |
 | `documents` | Markdown 文档、可见性、精选和可恢复 Trash | `Document` | 公开文档可读；私有数据和写入需要登录 |
-| `papers` | 推荐论文记忆、阅读状态、标签和文档关联 | `RecommendedPaper` | 全部需要登录 |
-| `servers` | 服务器清单、资源快照和白名单动作 | `Server` | 全部需要登录 |
+| `papers` | 推荐论文记忆、阅读状态、标签和文档关联 | `RecommendedPaper` | 管理接口登录；显式发布的论文可公开读取 |
+| `servers` | 服务器清单、资源快照和白名单动作 | `Server`、`ServerMetricSample` | 全部需要登录 |
+| `integrations` | Dashboard 外部页面 URL 和展示元数据 | `EmbeddedPage` | 全部需要登录 |
 | `core` | 跨域基础设施 | `MediaAsset`、`Tag`、`WorkspaceSettings`、审计模型 | 媒体读取可公开；管理操作需要登录 |
 
 `AuditEvent` 是通用审计模型的基础；当前服务器动作实际写入 `ServerActionLog`，后续可将所有重要写操作统一接入 `AuditEvent`。
@@ -116,6 +117,7 @@ migration 必须向前兼容已有数据。需要删除或重命名字段时，�
 - 业务 API 前缀固定为 `/api/v1/`。
 - JSON 字段使用前端约定的 camelCase，例如 `publishedAt`、`mediaAssetId`、`noteIds`。
 - 列表默认使用 DRF 分页，默认 `PAGE_SIZE=50`。
+- 列表可通过 `page`、`page_size` 分页，并通过白名单 `ordering` 选择时间、状态或名称排序；系统不建立“近期”专用数据表。
 - 列表支持 `search`、类型、状态、标签等轻量查询参数；前端同时兼容分页和非分页响应。
 - API schema 为 `/api/schema/`，Swagger UI 为 `/api/docs/`。
 - 典型错误：未登录 `401`、无权限 `403`、资源不存在 `404`、媒体仍被引用 `409`、尚未启用的远程动作 `501`。
@@ -130,10 +132,12 @@ migration 必须向前兼容已有数据。需要删除或重命名字段时，�
 | `/publications/` | 是 | 是 | 是 | 当前 Publication 没有私有可见性 |
 | `/docs/` | 公开文档 | 全部未归档文档 | 是 | `unlisted` 只能精确访问，不能出现在公开列表 |
 | `/papers/` | 否 | 是 | 是 | 私人推荐论文 |
+| `/public/papers/` | 是 | 是 | - | 仅返回 `publicly_visible=true` 的推荐论文；私有关联 Note 需要登录后读取正文 |
 | `/settings/` | 否 | 是 | 是 | 工作台设置和备份 |
 | `/tags/` | 否 | 是 | 标签重命名/删除 | 标签列表也属于工作台 |
 | `/media/` | 单个文件可读 | 是 | 上传/删除 | 删除前检查业务引用 |
 | `/servers/` | 否 | 是 | 是 | 包括状态刷新和动作日志 |
+| `/integrations/pages/` | 否 | 是 | 是 | 外部页面配置，不由后端抓取 |
 
 DRF 默认权限是 `AllowAny`，因此私有 ViewSet 必须显式声明 `IsAuthenticated` 或等价权限，新增接口时必须同时补充权限测试。
 
@@ -157,6 +161,7 @@ DRF 默认权限是 `AllowAny`，因此私有 ViewSet 必须显式声明 `IsAuth
 | `GET` | `/api/v1/research/current/` | 当前研究列表 |
 | `GET/POST/PATCH/DELETE` | `/api/v1/publications/` | 论文 CRUD；按 `slug` 读取 |
 | `GET/POST/PATCH/DELETE` | `/api/v1/docs/` | 文档 CRUD；按 `slug` 读取 |
+| `POST` | `/api/v1/docs/upload/` | multipart 上传 UTF-8 `.md`/`.markdown`，默认私有 |
 | `POST` | `/api/v1/docs/{slug}/trash/` | 移入 Trash |
 | `POST` | `/api/v1/docs/{slug}/restore/` | 从 Trash 恢复 |
 
@@ -174,9 +179,11 @@ DRF 默认权限是 `AllowAny`，因此私有 ViewSet 必须显式声明 `IsAuth
 | `GET/POST/PATCH/DELETE` | `/api/v1/papers/` | 推荐论文 CRUD |
 | `POST` | `/api/v1/papers/check/` | 以 DOI、arXiv ID 或标题检查重复 |
 | `GET` | `/api/v1/papers/export/` | 导出 JSON 或 Markdown |
+| `GET` | `/api/v1/public/papers/` | 公开推荐论文列表，按 `recommended_at DESC, id DESC` 分页 |
+| `GET` | `/api/v1/public/papers/{id}/` | 公开论文详情和关联 Note；匿名私有 Note 不返回正文 |
 | `GET/PATCH/PUT` | `/api/v1/settings/` | 工作台设置 |
 | `GET` | `/api/v1/settings/backup/` | 生成包含 JSON 和媒体文件的 ZIP 备份 |
-| `GET` | `/api/v1/tags/` | 标签列表 |
+| `GET/POST/PATCH/PUT/DELETE` | `/api/v1/tags/` | 标签 CRUD |
 | `POST` | `/api/v1/tags/rename/` | 合并、重命名或删除标签 |
 | `GET/POST/DELETE` | `/api/v1/media/` | 媒体读取、上传和删除 |
 
@@ -189,9 +196,12 @@ DRF 默认权限是 `AllowAny`，因此私有 ViewSet 必须显式声明 `IsAuth
 | `GET/POST/PATCH/DELETE` | `/api/v1/servers/` | 服务器清单 CRUD |
 | `GET` | `/api/v1/servers/{id}/status/` | 查看当前快照 |
 | `POST` | `/api/v1/servers/{id}/actions/` | 执行白名单动作 |
-| `POST` | `/api/v1/servers/refresh/` | 刷新所有启用服务器的 mock 状态 |
+| `POST` | `/api/v1/servers/refresh/` | 刷新所有启用服务器的 mock/SSH 状态 |
+| `POST` | `/api/v1/servers/{id}/test-connection/` | 测试连接和返回主机指纹状态 |
+| `POST` | `/api/v1/servers/{id}/trust-host/` | 显式保存首次发现的 SSH 主机指纹 |
+| `GET` | `/api/v1/servers/{id}/metrics/` | 读取指定小时窗口的历史资源样本 |
 
-当前允许动作集合为 `refresh_status`、`start_container`、`stop_container`、`restart_container` 和 `fetch_logs`。mock connector 只支持状态刷新；SSH、Docker Remote、3x-ui 等真实连接器尚未开放远程写操作。
+当前允许动作集合为 `refresh_status`、`start_container`、`stop_container`、`restart_container` 和 `fetch_logs`。mock 支持演示状态刷新；SSH 支持固定脚本的只读指标采集；容器和日志远程写操作仍未开放。
 
 ## 6. 数据库设计
 
@@ -322,6 +332,8 @@ Markdown 文档是公开 Notes 和私有研究笔记的统一实体。
 
 文档与 Tag 的连接表为 `documents_document_tags`。文档 Trash 是软删除：恢复时清空 `trashed_at`，不会丢失正文和关系。
 
+上传接口只接受 UTF-8 `.md`/`.markdown`，默认限制 10 MB；标题和摘要缺失时从 Markdown 内容推导。渲染端按 GFM 解析并经过 DOMPurify 清洗。
+
 ### 6.6 `papers` 域
 
 #### `papers_recommendedpaper`
@@ -338,6 +350,7 @@ Markdown 文档是公开 Notes 和私有研究笔记的统一实体。
 | `topic` | `varchar(180)` | 主题 |
 | `status` | `varchar(20)` | recommended/to_read/reading/read/ignored/important |
 | `recommended_at` | date | 加入推荐列表日期 |
+| `publicly_visible` | boolean | 是否出现在公开推荐论文页 |
 | `reason`、`abstract` | text | 推荐理由和摘要 |
 | `rating` | nullable unsigned smallint | 个人评分 |
 | `doi` | `varchar(180)` | DOI，非空时唯一 |
@@ -350,13 +363,13 @@ Markdown 文档是公开 Notes 和私有研究笔记的统一实体。
 - `doi != ''` 时，`doi` 唯一。
 - `arxiv_id != ''` 时，`arxiv_id` 唯一。
 
-这样允许未知标识为空，但可以阻止相同 DOI 或 arXiv ID 重复录入。Paper 与 Tag 的连接表为 `papers_recommendedpaper_tags`；Paper 与 Document 的连接表为 `papers_recommendedpaper_notes`。
+这样允许未知标识为空，但可以阻止相同 DOI 或 arXiv ID 重复录入。API 还会在写入前按规范化 DOI、arXiv ID 和标题进行重复检查，冲突返回 `409 duplicate_paper`。Paper 与 Tag 的连接表为 `papers_recommendedpaper_tags`；Paper 与 Document 的连接表为 `papers_recommendedpaper_notes`。
 
 ### 6.7 `servers` 域
 
 #### `servers_server`
 
-保存服务器清单和最近一次资源快照。资源快照采用 JSON，是为了允许不同机器报告不同维度而不频繁改表。
+保存服务器清单和当前资源快照。历史资源不覆盖旧值，而是写入 `servers_servermetricsample`，便于按时间窗口绘图。
 
 | 字段 | 类型/约束 | 说明 |
 |---|---|---|
@@ -364,9 +377,12 @@ Markdown 文档是公开 Notes 和私有研究笔记的统一实体。
 | `name` | `varchar(120)` | 显示名称 |
 | `hostname` | `varchar(180)` | 主机名 |
 | `ip` | nullable IP | IPv4/IPv6 |
+| `port` | unsigned int，1–65535 | SSH 端口，默认 22 |
+| `username` | `varchar(120)` | SSH 用户名 |
 | `description`、`location`、`os` | text/varchar | 描述、位置、系统 |
 | `status` | `varchar(12)` | online/offline/warning |
 | `provider` | `varchar(12)` | mock/ssh/xui |
+| `is_primary` | boolean | 是否为部署主机；应用层保证同一时间仅一个 |
 | `last_seen` | nullable datetime | 最近一次成功刷新 |
 | `uptime` | `varchar(80)` | 展示用运行时长 |
 | `capabilities` | JSON array | 能力标签，如 SSH、Docker、NVIDIA_GPU |
@@ -375,10 +391,44 @@ Markdown 文档是公开 Notes 和私有研究笔记的统一实体。
 | `gpus` | JSON array | GPU 快照 |
 | `containers` | unsigned int | 容器数量 |
 | `connector_config` | JSON object | connector 配置；当前不由 API serializer 返回 |
+| `encrypted_password` | text | 使用 Fernet 加密后的 SSH 密码，不出现在 serializer |
+| `host_key_fingerprint` | `varchar(160)` | 用户显式确认的 SSH 主机指纹 |
+| `last_error` | text | 最近一次连接或采集失败信息 |
 | `enabled` | boolean | 是否参与批量刷新 |
 | `created_at`、`updated_at` | datetime | 生命周期时间 |
 
-当前 `connector_config` 没有加密层，因此在启用真实 SSH 或 3x-ui connector 前，不应把私钥、密码或 token 明文放入该字段。正式接入时应使用外部 secret manager、加密字段或至少独立的密钥管理方案。
+`connector_config` 仍不用于保存密码、私钥或 token。SSH 密码写入 `encrypted_password`，使用由 `DJANGO_SECRET_KEY` 派生的 Fernet 密钥加密；生产环境必须保证 secret 稳定且不提交到仓库。
+
+#### `servers_servermetricsample`
+
+按主机记录历史资源样本，服务端保存字节值，前端按需要换算为 GB/TB。
+
+| 字段 | 类型/约束 | 说明 |
+|---|---|---|
+| `server_id` | FK -> `servers_server` | 主机关联，主机删除时级联清理样本 |
+| `recorded_at` | datetime | 采集时间；索引为 `(server_id, recorded_at DESC)` |
+| `cpu_percent`、`load_average` | float | CPU 使用率和系统负载 |
+| `memory_used_bytes`、`memory_total_bytes` | unsigned bigint | 内存使用量/总量 |
+| `disk_used_bytes`、`disk_total_bytes` | unsigned bigint | 根分区使用量/总量 |
+| `gpu_utilization_percent`、`gpu_memory_*`、`gpu_count` | float/bigint/int | GPU 概览 |
+| `containers` | unsigned int | Docker 运行容器数 |
+| `payload` | JSON object | GPU 明细和 connector 来源 |
+
+#### `integrations_embeddedpage`
+
+保存用户在 Dashboard 中配置的外部页面，不保存外部服务凭据，也不由 Django 代理抓取。
+
+| 字段 | 类型/约束 | 说明 |
+|---|---|---|
+| `id` | bigint PK | 页面 ID |
+| `slug` | varchar UNIQUE | 路由标识 |
+| `title`、`description` | varchar/text | 页面名称和描述 |
+| `url` | URL，http/https | iframe 来源 |
+| `icon` | varchar | 可选图标短标签 |
+| `order` | unsigned int | Dashboard 排序 |
+| `enabled` | boolean | 是否启用 |
+| `open_in_new_tab` | boolean | 是否显示外部打开入口 |
+| `created_at`、`updated_at` | datetime | 生命周期时间 |
 
 ### 6.8 `core` 域
 
@@ -389,7 +439,11 @@ Markdown 文档是公开 Notes 和私有研究笔记的统一实体。
 | `id` | `bigint` PK | 标签 ID |
 | `name` | `varchar(80)` UNIQUE | 规范化后的展示名称 |
 | `slug` | `varchar(90)` UNIQUE | `slugify(name)` |
+| `color` | `varchar(7)` | 六位十六进制颜色，例如 `#5C7891` |
+| `description` | text | 标签定义和使用说明 |
+| `parent_id` | nullable FK -> `core_tag` | 可空父标签，SET NULL，禁止循环 |
 | `created_at` | datetime | 创建时间 |
+| `updated_at` | datetime | 元数据更新时间 |
 
 标签写入会压缩空白、去除首尾空格，并在 API 层按大小写不敏感规则去重。标签重命名会迁移 Publication、Document、RecommendedPaper 的连接关系。
 
@@ -458,6 +512,7 @@ erDiagram
     DOCUMENTS_DOCUMENT }o--o{ CORE_TAG : tags
     PAPERS_RECOMMENDED_PAPER }o--o{ CORE_TAG : tags
     PAPERS_RECOMMENDED_PAPER }o--o{ DOCUMENTS_DOCUMENT : notes
+    SERVERS_SERVER ||--o{ SERVERS_SERVER_METRIC_SAMPLE : metrics
 ```
 
 补充说明：
@@ -467,6 +522,7 @@ erDiagram
 - `Publication`、`Document`、`RecommendedPaper` 与 Tag 是多对多关系，Django 自动维护连接表。
 - `ResearchProject` 和 `Publication` 对 `MediaAsset` 使用可空外键 + `SET NULL`。
 - `ServerActionLog.server_id` 是逻辑引用，不能依赖数据库级级联。
+- `ServerMetricSample.server_id` 是正式外键，删除主机时级联删除历史样本。
 
 ## 8. 一致性、事务与删除策略
 
@@ -511,7 +567,7 @@ erDiagram
 
 `GET /api/v1/settings/backup/` 生成 ZIP：
 
-- `research-os.json`：站点资料、研究项目、当前研究、Publication、Document、Paper、Server、Settings。
+- `research-os.json`：站点资料、研究项目、当前研究、Publication、Document、Paper、Server、ServerMetricSample、Tag、EmbeddedPage、Settings。
 - `media/<uuid>/<filename>`：所有已保存媒体文件。
 
 宿主机脚本 `scripts/backup.sh` 另外生成：
@@ -536,12 +592,16 @@ erDiagram
 ## 11. 安全设计
 
 - 生产环境通过 `DJANGO_SECRET_KEY`、`ALLOWED_HOSTS`、`CSRF_TRUSTED_ORIGINS` 和 HTTPS 配置安全边界。
-- 密码只由 Django 保存哈希；不要把密码写入 seed 数据或提交到仓库。
+- 账户密码只由 Django 保存哈希；SSH 密码单独加密保存。不要把任何密码写入 seed 数据或提交到仓库。
 - Session 和 CSRF cookie 在非 DEBUG 环境默认 Secure；反向代理通过 `X-Forwarded-Proto` 识别 HTTPS。
 - 媒体上传有大小和扩展名白名单；文件名会被清理并放到 UUID 目录。
 - interactive 内容只在浏览器 sandbox iframe 中加载，不执行 npm 安装、构建脚本或网络请求。
 - 服务器 API 只接受固定动作，不接受任意命令或任意 connector 参数。
-- `connector_config` 当前不会通过 Server serializer 返回；真实 connector 上线前必须解决密钥加密和轮换。
+- `connector_config` 当前不会通过 Server serializer 返回；不要把密码、私钥或 token 放进该 JSON 字段。
+- SSH 密码使用由 `DJANGO_SECRET_KEY` 派生的 Fernet 密钥加密，`ServerSerializer` 只提供 write-only `password`；生产环境不得使用默认 secret。
+- 首次 SSH 握手只返回主机指纹，不自动信任；指纹变化会阻断连接。
+- Markdown 内容经过 GFM 解析和 DOMPurify 清洗，禁止脚本、表单与 iframe 标签。
+- Dashboard 外部页面只允许 http/https，使用 sandbox iframe；第三方的 CSP/X-Frame-Options 可能阻止嵌入，应用不绕过该策略。
 - 公开内容不能依赖前端隐藏来实现权限；公开/私有判断必须在 queryset 和 retrieve 层完成。
 
 ## 12. 可维护性与版本升级约定
@@ -576,7 +636,7 @@ erDiagram
 - 使用 HTTPS，并确认 Secure cookie、Host 和 CSRF origin 配置。
 - 将数据库和媒体备份复制到独立机器并做一次恢复演练。
 - 增加一个无需登录的 `/health/` 或 `/api/health/`，同时检查数据库连接，方便 Docker/反向代理探活。
-- 为 `connector_config` 明确禁止保存明文密钥，或暂时完全禁用真实 connector。
+- 为 SSH 凭据配置密钥轮换和备份策略；如果更换 `DJANGO_SECRET_KEY`，应先规划旧凭据迁移。
 
 ### P2：使用规模增长后
 

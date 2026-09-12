@@ -7,10 +7,12 @@ export interface PublicNote {
   summary: string
   excerpt: string
   kind: NoteKind
-  publishedAt: string
+  publishedAt: string | null
   displayDate: string
   readingTime: string
   tags: string[]
   featured: boolean
+  visibility?: 'private' | 'public' | 'unlisted'
+  content?: string
+  requiresAuth?: boolean
 }
-

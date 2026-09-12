@@ -1,3 +1,4 @@
+from django.db import transaction
 from django.db.models import Q
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -35,10 +36,12 @@ class MediaAssetViewSet(viewsets.ModelViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class TagViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Tag.objects.all()
+class TagViewSet(viewsets.ModelViewSet):
     serializer_class = TagSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Tag.objects.select_related("parent").prefetch_related("children").all()
 
     @action(detail=False, methods=["post"])
     def rename(self, request):
@@ -50,20 +53,21 @@ class TagViewSet(viewsets.ReadOnlyModelViewSet):
         if source_tag is None:
             return Response({"detail": "Tag not found"}, status=status.HTTP_404_NOT_FOUND)
         relations = ((RecommendedPaper, "recommendedpaper"), (Publication, "publication"), (Document, "document"))
-        if not target:
+        with transaction.atomic():
+            if not target:
+                for model, _ in relations:
+                    model._meta.get_field("tags").remote_field.through.objects.filter(tag=source_tag).delete()
+                source_tag.delete()
+                return Response({"status": "removed"})
+            if source_tag.name.casefold() == target.casefold():
+                return Response({"status": "unchanged", "tag": TagSerializer(source_tag).data})
+            target_tag = Tag.objects.filter(name__iexact=target).first()
+            if target_tag is None:
+                target_tag = Tag.objects.create(name=target)
             for model, object_field in relations:
-                model._meta.get_field("tags").remote_field.through.objects.filter(tag=source_tag).delete()
+                through = model._meta.get_field("tags").remote_field.through
+                for row in through.objects.filter(tag=source_tag).select_related(object_field):
+                    through.objects.get_or_create(**{object_field: getattr(row, object_field), "tag": target_tag})
+                through.objects.filter(tag=source_tag).delete()
             source_tag.delete()
-            return Response({"status": "removed"})
-        if source_tag.name.casefold() == target.casefold():
-            return Response({"status": "unchanged", "tag": TagSerializer(source_tag).data})
-        target_tag = Tag.objects.filter(name__iexact=target).first()
-        if target_tag is None:
-            target_tag = Tag.objects.create(name=target)
-        for model, object_field in relations:
-            through = model._meta.get_field("tags").remote_field.through
-            for row in through.objects.filter(tag=source_tag).select_related(object_field):
-                through.objects.get_or_create(**{object_field: getattr(row, object_field), "tag": target_tag})
-            through.objects.filter(tag=source_tag).delete()
-        source_tag.delete()
         return Response({"status": "renamed", "tag": TagSerializer(target_tag).data})

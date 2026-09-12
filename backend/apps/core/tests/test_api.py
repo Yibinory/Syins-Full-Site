@@ -1,15 +1,18 @@
-from datetime import date
+from datetime import date, timedelta
+from io import BytesIO
+from zipfile import ZipFile
 
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
+from django.utils import timezone
 from rest_framework.test import APIClient
 
 from apps.content.models import CurrentResearchItem, SiteProfile
 from apps.documents.models import Document
 from apps.papers.models import RecommendedPaper
 from apps.publications.models import Publication
-from apps.servers.models import Server
+from apps.servers.models import Server, ServerMetricSample
 
 
 @override_settings(ALLOWED_HOSTS=["testserver", "localhost"])
@@ -95,10 +98,121 @@ class ResearchOsApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         response = self.client.post("/api/v1/servers/{}/actions/".format(server.id), {"action": "run_shell", "command": "uname"}, format="json")
         self.assertEqual(response.status_code, 501)
+        self.assertEqual(ServerMetricSample.objects.filter(server=server).count(), 0)
+        history = self.client.get("/api/v1/servers/{}/metrics/".format(server.id)).json()
+        self.assertEqual(history["count"], 0)
+
+    def test_server_metrics_limit_keeps_latest_samples_in_time_order(self):
+        self.login()
+        server = Server.objects.create(name="History server", provider="mock")
+        start = timezone.now() - timedelta(minutes=3)
+        for index in range(3):
+            ServerMetricSample.objects.create(
+                server=server,
+                recorded_at=start + timedelta(minutes=index),
+                cpu_percent=index,
+            )
+        response = self.client.get("/api/v1/servers/{}/metrics/?limit=2".format(server.id))
+        self.assertEqual([sample["cpu"] for sample in response.json()["results"]], [1, 2])
+
+    def test_markdown_upload_and_public_paper_note_access(self):
+        self.login()
+        upload = SimpleUploadedFile("longitudinal-note.md", b"# Uploaded Note\n\n**A useful finding.**", content_type="text/markdown")
+        response = self.client.post("/api/v1/docs/upload/", {"file": upload, "visibility": "private"}, format="multipart")
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json()["title"], "Uploaded Note")
+        note = Document.objects.get(pk=response.json()["id"])
+        paper = RecommendedPaper.objects.create(title="Public paper memory", year=2026, recommended_at=date(2026, 9, 12), publicly_visible=True)
+        paper.notes.add(note)
+        self.client.post("/api/v1/auth/logout/", format="json")
+        public = self.client.get("/api/v1/public/papers/{}/".format(paper.id))
+        self.assertEqual(public.status_code, 200)
+        self.assertTrue(public.json()["notes"][0]["requiresAuth"])
+        self.assertNotIn("content", public.json()["notes"][0])
+        self.login()
+        private_public = self.client.get("/api/v1/public/papers/{}/".format(paper.id)).json()
+        self.assertNotIn("content", private_public["notes"][0])
+        self.assertIn("A useful finding", self.client.get("/api/v1/docs/{}/".format(note.slug)).json()["content"])
+
+    def test_recommended_paper_duplicate_check_returns_conflict(self):
+        self.login()
+        payload = {"title": "One unique paper", "year": 2026, "recommendedAt": "2026-09-12", "doi": "10.1000/ABC"}
+        self.assertEqual(self.client.post("/api/v1/papers/", payload, format="json").status_code, 201)
+        duplicate = self.client.post("/api/v1/papers/", {**payload, "doi": "https://doi.org/10.1000/abc"}, format="json")
+        self.assertEqual(duplicate.status_code, 409)
+        self.assertEqual(duplicate.json()["code"], "duplicate_paper")
+
+    def test_public_paper_list_is_paginated_and_orderable(self):
+        for index, month in enumerate((1, 2, 3), start=1):
+            RecommendedPaper.objects.create(
+                title="Ordered paper {}".format(index),
+                year=2026,
+                recommended_at=date(2026, month, 1),
+                publicly_visible=True,
+            )
+        response = self.client.get("/api/v1/public/papers/?page_size=1&ordering=recommended_at")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["count"], 3)
+        self.assertEqual(len(response.json()["results"]), 1)
+        self.assertEqual(response.json()["results"][0]["title"], "Ordered paper 1")
+
+    def test_tag_metadata_and_hierarchy_are_editable(self):
+        self.login()
+        parent = self.client.post("/api/v1/tags/", {"name": "Imaging", "color": "#204060", "description": "Image methods"}, format="json")
+        self.assertEqual(parent.status_code, 201)
+        child = self.client.post("/api/v1/tags/", {"name": "MRI", "parentId": parent.json()["id"]}, format="json")
+        self.assertEqual(child.status_code, 201)
+        updated = self.client.patch("/api/v1/tags/{}/".format(child.json()["id"]), {"color": "#AABBCC", "description": "MR imaging", "parentId": parent.json()["id"]}, format="json")
+        self.assertEqual(updated.status_code, 200)
+        self.assertEqual(updated.json()["parentId"], parent.json()["id"])
+        self.assertEqual(updated.json()["color"], "#AABBCC")
+
+    def test_dashboard_embedded_page_accepts_http_urls_only(self):
+        self.login()
+        created = self.client.post("/api/v1/integrations/pages/", {"title": "3x-ui", "url": "https://panel.example.com/", "description": "Panel"}, format="json")
+        self.assertEqual(created.status_code, 201)
+        self.assertEqual(self.client.get("/api/v1/integrations/pages/").json()["results"][0]["title"], "3x-ui")
+        duplicate_title = self.client.post("/api/v1/integrations/pages/", {"title": "3x-ui", "url": "https://another.example.com/"}, format="json")
+        self.assertEqual(duplicate_title.status_code, 201)
+        self.assertNotEqual(duplicate_title.json()["slug"], created.json()["slug"])
+        rejected = self.client.post("/api/v1/integrations/pages/", {"title": "Local", "url": "javascript:alert(1)"}, format="json")
+        self.assertEqual(rejected.status_code, 400)
 
     def test_authenticated_backup_contains_workspace_records(self):
         self.login()
+        tag = self.client.post("/api/v1/tags/", {"name": "Backup tag", "color": "#123456"}, format="json")
+        self.assertEqual(tag.status_code, 201)
+        integration = self.client.post("/api/v1/integrations/pages/", {"title": "Backup page", "url": "https://example.com/"}, format="json")
+        self.assertEqual(integration.status_code, 201)
         response = self.client.get("/api/v1/settings/backup/")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Content-Type"], "application/zip")
-        self.assertIn(b"research-os.json", response.content)
+        with ZipFile(BytesIO(response.content)) as archive:
+            self.assertIn("research-os.json", archive.namelist())
+            backup_json = archive.read("research-os.json").decode("utf-8")
+        self.assertIn("Backup tag", backup_json)
+        self.assertIn("Backup page", backup_json)
+
+    def test_overview_excludes_mock_and_counts_database_records(self):
+        self.assertEqual(self.client.get('/api/v1/overview/').status_code, 403)
+        self.login()
+        Server.objects.all().delete()
+        Server.objects.create(name='Demo', provider='mock', status='online', gpus=[{}, {}, {}])
+        Server.objects.create(name='Real', provider='ssh', status='online', gpus=[{}])
+        Server.objects.create(name='Failed', provider='ssh', status='warning')
+        response = self.client.get('/api/v1/overview/').json()
+        self.assertEqual(response['servers'], {'total': 2, 'online': 1, 'gpus': 1})
+
+    def test_external_pages_public_visibility_is_explicit_and_read_only(self):
+        self.login()
+        private = self.client.post('/api/v1/integrations/pages/', {'title': 'Private panel', 'url': 'https://private.example.com/'}, format='json').json()
+        public = self.client.post('/api/v1/integrations/pages/', {'title': 'Shared tool', 'url': 'https://tools.example.com/', 'publiclyVisible': True}, format='json').json()
+        self.client.logout()
+        self.assertEqual(self.client.get('/api/v1/public/pages/').json()['count'], 1)
+        self.assertEqual(self.client.get('/api/v1/public/pages/{}/'.format(private['slug'])).status_code, 404)
+        self.assertEqual(self.client.get('/api/v1/public/pages/{}/'.format(public['slug'])).status_code, 200)
+        self.assertIn(self.client.post('/api/v1/public/pages/', {'title': 'No write'}, format='json').status_code, [403, 405])
+        self.login()
+        self.client.patch('/api/v1/integrations/pages/{}/'.format(public['slug']), {'publiclyVisible': False}, format='json')
+        self.client.logout()
+        self.assertEqual(self.client.get('/api/v1/public/pages/').json()['count'], 0)

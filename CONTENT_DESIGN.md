@@ -9,10 +9,12 @@
 | Current research | 标题、摘要、状态、研究问题、方法、更新时间 | 列表与详情 | 已由 Django 内容接口管理 |
 | Selected research | 标题、动机一句、做法一句、状态、两个链接、素材类型、素材地址、替代文本、图注、顺序 | 图文交错；完整显示图片；视频由访客控制播放 | Django 已持久化配置；媒体上传使用独立 MediaAsset |
 | Publications | 标题、作者、年份、会议/期刊、摘要、缩略图、论文/代码链接、BibTeX、精选标记 | 年份分组与类型筛选；首页引用精选记录 | 页面介绍由 Site content 管理；条目由 Publications API 管理 |
-| Notes | 标题、摘要、Markdown 正文、内容类型、标签、可见性、发布时间、精选标记 | 列表索引与统一阅读页；首页引用精选记录 | Documents API 管理；公开读取与私有编辑权限分开 |
+| Notes | 标题、摘要、Markdown 正文、内容类型、标签、可见性、发布时间、精选标记 | 列表索引与统一阅读页；首页引用精选记录 | Documents API 管理；公开读取与私有编辑权限分开；工作台支持 UTF-8 `.md`/`.markdown` 直接上传 |
 | Dashboard overview | 从论文、Current Research、文档、服务器模块聚合真实数据 | 统一栅格和常用操作 | 研究进度不单独虚构；当前显示状态和更新时间 |
-| Recommended papers | 论文元数据、推荐理由、阅读状态、标签、笔记 | 高密度列表与抽屉 | Django 持久化；DOI/arXiv 去重约束与 JSON/Markdown 导出已提供 |
-| Servers / VPN | 服务器名称、分组、能力、连接信息、集成设置 | 按能力显示状态与操作 | Servers 已接入后端快照；VPN 保留 3x-ui 集成占位 |
+| Recommended papers | 论文元数据、推荐理由、阅读状态、标签、笔记 | 高密度列表与抽屉；公开页按推荐日期排序并展开关联 Note | Django 持久化；DOI/arXiv/标题去重、公开开关与 JSON/Markdown 导出已提供 |
+| Servers / VPN | 服务器名称、primary 标记、能力、SSH 连接信息、资源历史、集成设置 | 按能力显示状态、轮询快照和历史曲线 | Servers 已接入 mock/SSH 后端；VPN 保留 3x-ui 外部页面嵌入入口 |
+| Dashboard pages | 页面名称、描述、URL、排序、启用状态 | Dashboard 内 sandbox iframe，提供新标签页回退 | URL 仅允许 HTTP(S)；目标站点仍可通过 CSP/X-Frame-Options 禁止嵌入 |
+| Tags | 名称、颜色、描述、父标签 | 统一标签编辑器和层级管理页 | 共享 Tag 表；父子关系禁止循环 |
 | Settings | 写作默认值、共享标签、媒体库、备份 | 分组表单 | 已接入 Django workspace；公共内容继续由 Site content 管理 |
 
 ## 科研配图选型
@@ -31,8 +33,10 @@ The Django backend is now the normal source of truth. The browser cache is only 
 
 - Publications now has a separate manager for authored papers: metadata, motivation, approach, abstract, tags, media, links, BibTeX and homepage selection. Public listings and homepage selections share these records.
 - Recommended papers preserve their detail information and add editable tags, reading status, paper URL and zero-to-many note links. A note can be linked from multiple papers. Unlinking does not delete it, and Trash retains links for restoration.
-- Documents now supports create/edit/save, Markdown with sanitized preview, unique slugs, public/private/unlisted visibility, public reading pages, homepage selection and recoverable Trash. Homepage note content now comes from Documents.
-- Settings now provides new-note defaults, global tag rename/merge, media cleanup and deployment backup scripts. Account security is handled by Django sessions and CSRF.
+- Recommended papers can be explicitly published to a public, date-ordered reading page. The public detail view renders linked public Notes and exposes private Note content only after session authentication.
+- Documents now supports create/edit/save, direct UTF-8 Markdown upload, Markdown with sanitized preview, unique slugs, public/private/unlisted visibility, public reading pages, homepage selection and recoverable Trash. Homepage note content now comes from Documents.
+- Settings now provides new-note defaults, global tag rename/merge, media cleanup and deployment backup scripts. The Tags page adds color, description and parent hierarchy metadata. Account security is handled by Django sessions and CSRF.
+- Servers now support primary-host inventory, SSH credential setup, explicit host-key trust, fixed read-only metrics collection, polling and historical resource charts. Dashboard pages can embed external tools such as 3x-ui when their framing policy permits it.
 - Records are stored in Django/PostgreSQL (or SQLite for local development). Uploaded media is stored under the configured media volume. Publication and Document edits use form drafts and explicit saves; Site content and recommended-paper changes are sent to the API immediately.
 
 ### Interactive package contract

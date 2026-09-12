@@ -1,5 +1,6 @@
 import hashlib
 import os
+import re
 import uuid
 
 from django.conf import settings
@@ -15,7 +16,11 @@ MAX_MEDIA_UPLOAD_BYTES = 25 * 1024 * 1024
 class Tag(models.Model):
     name = models.CharField(max_length=80, unique=True)
     slug = models.SlugField(max_length=90, unique=True)
+    color = models.CharField(max_length=7, default="#5C7891")
+    description = models.TextField(blank=True)
+    parent = models.ForeignKey("self", null=True, blank=True, on_delete=models.SET_NULL, related_name="children")
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ["name"]
@@ -24,7 +29,28 @@ class Tag(models.Model):
         self.name = " ".join(self.name.strip().split())
         if not self.name:
             raise ValidationError("Tag name cannot be empty.")
-        self.slug = slugify(self.name)
+        self.color = (self.color or "#5C7891").upper()
+        if not re.fullmatch(r"#[0-9A-F]{6}", self.color):
+            raise ValidationError("Tag color must be a six-digit hexadecimal value.")
+        if self.parent_id and self.parent_id == self.pk:
+            raise ValidationError("A tag cannot be its own parent.")
+        parent = self.parent
+        visited = {self.pk} if self.pk else set()
+        while parent is not None:
+            if parent.pk in visited:
+                raise ValidationError("Tag hierarchy cannot contain a cycle.")
+            visited.add(parent.pk)
+            parent = parent.parent
+        base_slug = slugify(self.name, allow_unicode=True)[:80]
+        if not base_slug:
+            base_slug = "tag-" + hashlib.sha256(self.name.encode("utf-8")).hexdigest()[:12]
+        candidate = base_slug
+        counter = 2
+        while Tag.objects.filter(slug=candidate).exclude(pk=self.pk).exists():
+            suffix = "-{}".format(counter)
+            candidate = base_slug[:90 - len(suffix)] + suffix
+            counter += 1
+        self.slug = candidate
         super().save(*args, **kwargs)
 
     def __str__(self):

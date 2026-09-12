@@ -22,6 +22,7 @@ class RecommendedPaper(models.Model):
     topic = models.CharField(max_length=180, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="recommended")
     recommended_at = models.DateField()
+    publicly_visible = models.BooleanField(default=False)
     reason = models.TextField(blank=True)
     abstract = models.TextField(blank=True)
     rating = models.PositiveSmallIntegerField(null=True, blank=True)

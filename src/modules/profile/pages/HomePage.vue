@@ -17,7 +17,7 @@ const currentResearch = computed(() => siteContent.content.currentResearch?.leng
 
 const workspace = useWorkspaceStore()
 const publications = computed(() => workspace.publications.filter(p => p.featured).sort((a, b) => b.year - a.year))
-const latestNote = computed(() => workspace.documents.filter(n => n.visibility === 'public' && !n.trashedAt).sort((a, b) => Number(b.featured) - Number(a.featured) || b.publishedAt.localeCompare(a.publishedAt))[0])
+const featuredNote = computed(() => workspace.documents.filter(n => n.visibility === 'public' && !n.trashedAt).sort((a, b) => Number(b.featured) - Number(a.featured) || (b.publishedAt || '').localeCompare(a.publishedAt || ''))[0])
 
 const portrait = ref<HTMLElement | null>(null)
 const lens = reactive({ x: 160, y: 190, visible: false, pinned: false })
@@ -40,27 +40,27 @@ function toggleLens() {
   <PublicLayout>
     <section class="hero page-grid">
       <div class="hero-copy">
-        <p class="eyebrow"><span>01 — Identity</span><span>{{ siteContent.content.title }} · {{ siteContent.content.location }}</span></p>
+        <p class="eyebrow"><span>{{ $t("01 — Identity") }}</span><span>{{ siteContent.content.title }} · {{ siteContent.content.location }}</span></p>
         <h1><span v-for="(part, index) in siteContent.content.name.split(' ')" :key="index">{{ part }}</span></h1>
         <p class="hero-headline">{{ siteContent.content.headline }}</p>
         <p class="hero-bio">{{ siteContent.content.bio }}</p>
         <div class="hero-links">
           <a v-for="link in [{ label: 'Google Scholar', href: siteContent.content.scholarUrl }, { label: 'GitHub', href: siteContent.content.githubUrl }, { label: 'Curriculum Vitae', href: siteContent.content.cvUrl }]" :key="link.label" :href="link.href">{{ link.label }} <ArrowUpRight :size="15" /></a>
-          <a :href="`mailto:${siteContent.content.email}`">Email <ArrowUpRight :size="15" /></a>
+          <a :href="`mailto:${siteContent.content.email}`">{{ $t("Email") }} <ArrowUpRight :size="15" /></a>
         </div>
       </div>
       <figure ref="portrait" class="portrait-wrap portrait-interactive" @pointermove="moveLens" @pointerenter="lens.visible = true" @pointerleave="lens.visible = lens.pinned" @click="toggleLens">
-        <img class="portrait-image" src="/images/syins-yibinory-portrait-mock.png" alt="Portrait of Syins Yibinory in a medical imaging research studio" />
-        <div class="portrait-lens" :class="{ visible: lens.visible }" :style="lensStyle" aria-hidden="true"><span>RESEARCH LENS</span></div>
-        <span class="lens-instruction">Move to reveal the research</span>
-        <span class="portrait-axis">SUBJECT — RESEARCHER</span>
+        <img class="portrait-image" src="/images/syins-yibinory-portrait-mock.png" :alt="$t('Portrait of Syins Yibinory in a medical imaging research studio')" />
+        <div class="portrait-lens" :class="{ visible: lens.visible }" :style="lensStyle" aria-hidden="true"><span>{{ $t("RESEARCH LENS") }}</span></div>
+        <span class="lens-instruction">{{ $t("Move to reveal the research") }}</span>
+        <span class="portrait-axis">{{ $t("SUBJECT — RESEARCHER") }}</span>
         <i class="portrait-corner portrait-corner--a" /><i class="portrait-corner portrait-corner--b" />
-        <figcaption><span>FIG. HD—01 / 2026</span><span>Researching images in motion</span></figcaption>
+        <figcaption><span>{{ $t("FIG. HD—01 / 2026") }}</span><span>{{ $t("Researching images in motion") }}</span></figcaption>
       </figure>
-      <a href="#selected-research" class="scroll-note">Selected work below <ArrowDownRight :size="17" /></a>
+      <a href="#selected-research" class="scroll-note">{{ $t("Selected work below") }} <ArrowDownRight :size="17" /></a>
     </section>
 
-    <div class="research-vocabulary" aria-label="Research directions">
+    <div class="research-vocabulary" :aria-label="$t('Research directions')">
       <template v-for="(direction, index) in siteContent.content.researchDirections.split('×')" :key="index">
         <i v-if="index" aria-hidden="true">×</i><span>{{ direction.trim() }}</span>
       </template>
@@ -68,7 +68,7 @@ function toggleLens() {
 
     <section id="research" class="current page-grid">
       <div class="section-heading">
-        <p class="section-kicker">02 — Current research</p>
+        <p class="section-kicker">{{ $t("02 — Current research") }}</p>
         <h2>{{ siteContent.content.currentResearchHeading }}</h2>
       </div>
       <div class="research-list">
@@ -80,29 +80,29 @@ function toggleLens() {
         </button>
         <div class="research-detail" aria-live="polite">
           <span class="detail-number">{{ currentResearch[activeResearch].number }}</span>
-          <div><p>Research question</p><h3>{{ currentResearch[activeResearch].question }}</h3></div>
-          <div><p>Current approach</p><strong>{{ currentResearch[activeResearch].method }}</strong><small>{{ currentResearch[activeResearch].updated }}</small></div>
+          <div><p>{{ $t("Research question") }}</p><h3>{{ currentResearch[activeResearch].question }}</h3></div>
+          <div><p>{{ $t("Current approach") }}</p><strong>{{ currentResearch[activeResearch].method }}</strong><small>{{ currentResearch[activeResearch].updated }}</small></div>
         </div>
       </div>
     </section>
 
     <section id="selected-research" class="selected-work page-grid">
       <div class="section-heading work-heading">
-        <p class="section-kicker">03 — Selected research</p>
+        <p class="section-kicker">{{ $t("03 — Selected research") }}</p>
         <h2>{{ siteContent.content.featuredResearchHeading }}</h2>
         <p class="work-aside">{{ siteContent.content.featuredResearchIntro }}</p>
       </div>
       <article v-for="(project, index) in siteContent.content.selectedProjects" :key="project.id" class="feature-project" :class="{ 'feature-project--reverse': index % 2 === 1 }">
         <ResearchMedia :project="project" />
         <div class="project-copy">
-          <span class="project-index">Project {{ String(index + 1).padStart(2, '0') }} · {{ project.status }}</span>
+          <span class="project-index">{{ $t("Project") }} {{ String(index + 1).padStart(2, '0') }} · {{ project.status }}</span>
           <h3>{{ project.title }}</h3>
           <p class="research-question">{{ project.motivation }}</p>
           <p>{{ project.approach }}</p>
           <div class="project-links">
             <template v-for="(link, linkIndex) in project.links" :key="linkIndex">
               <a v-if="link.url" :href="link.url">{{ link.label }} <ArrowUpRight :size="15" /></a>
-              <span v-else class="project-link-pending">{{ link.label }} · Coming soon</span>
+              <span v-else class="project-link-pending">{{ link.label }} {{ $t("· Coming soon") }}</span>
             </template>
           </div>
         </div>
@@ -111,22 +111,22 @@ function toggleLens() {
 
     <section class="publications-preview page-grid">
       <div class="section-heading publications-title">
-        <p class="section-kicker">Selected publications</p>
-        <h2>Recent work</h2>
-        <RouterLink to="/publications">View all publications <ArrowUpRight :size="15" /></RouterLink>
+        <p class="section-kicker">{{ $t("Selected publications") }}</p>
+        <h2>{{ $t("Selected publications") }}</h2>
+        <RouterLink to="/publications">{{ $t("View all publications") }} <ArrowUpRight :size="15" /></RouterLink>
       </div>
       <div class="publication-list">
         <article v-for="paper in publications" :key="paper.title" class="publication-row">
           <div class="pub-year">{{ paper.year }}</div>
           <div><p class="pub-venue">{{ paper.venueShort }}</p><h3>{{ paper.title }}</h3><p class="pub-authors">{{ paper.authors }}</p><div class="tag-list"><span v-for="tag in paper.tags" :key="tag">{{ tag }}</span></div></div>
-          <a v-if="paper.paperUrl" :href="paper.paperUrl" aria-label="Open publication"><ArrowUpRight :size="20" /></a>
+          <a v-if="paper.paperUrl" :href="paper.paperUrl" :aria-label="$t('Open publication')"><ArrowUpRight :size="20" /></a>
         </article>
       </div>
     </section>
 
-    <section v-if="latestNote" class="notes-preview page-grid">
-      <div><p class="section-kicker">Notes & writing</p><h2>Thinking in public.</h2></div>
-      <article><time>{{ latestNote.publishedAt }}</time><h3>{{ latestNote.title }}</h3><p>{{ latestNote.summary }}</p><RouterLink :to="`/notes/${latestNote.slug}`">Read note <ArrowUpRight :size="15" /></RouterLink></article>
+    <section v-if="featuredNote" class="notes-preview page-grid">
+      <div><p class="section-kicker">{{ $t("Notes & writing") }}</p><h2>{{ $t("Thinking in public.") }}</h2></div>
+      <article><time>{{ featuredNote.publishedAt || featuredNote.displayDate }}</time><h3>{{ featuredNote.title }}</h3><p>{{ featuredNote.summary }}</p><RouterLink :to="`/notes/${featuredNote.slug}`">{{ $t("Read note") }} <ArrowUpRight :size="15" /></RouterLink></article>
     </section>
   </PublicLayout>
 </template>

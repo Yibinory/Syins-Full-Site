@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     "apps.documents",
     "apps.papers",
     "apps.servers",
+    "apps.integrations",
 ]
 
 MIDDLEWARE = [

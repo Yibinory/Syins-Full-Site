@@ -15,6 +15,9 @@ class DocumentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Document
+        extra_kwargs = {
+            "slug": {"required": False, "allow_blank": True},
+        }
         fields = [
             "id", "slug", "title", "summary", "excerpt", "kind", "content", "publishedAt",
             "displayDate", "readingTime", "visibility", "featured", "tags", "trashedAt", "updatedAt",

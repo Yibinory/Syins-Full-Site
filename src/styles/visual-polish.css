@@ -190,3 +190,31 @@
   .content-editor form, .project-editor, .content-editor .media-editor .field-grid { grid-template-columns: minmax(0, 1fr); }
   .content-editor .media-editor .field-grid input { max-width: 100%; }
 }
+
+/* Long titles must fit their own grid track, including at intermediate widths. */
+.featured-note-copy, .featured-note-figure, .note-entry-main { min-width: 0; }
+.featured-note-copy h2 { max-width: 100%; font-size: clamp(2rem, 3.3vw, 3.8rem); line-height: 1.12; overflow-wrap: anywhere; }
+.featured-note-copy > p { overflow-wrap: anywhere; }
+.featured-note-figure img { flex: none; height: 100%; max-height: 620px; min-height: 0; object-fit: cover; }
+.featured-note-figure { display: grid; grid-template-rows: minmax(0, 1fr) auto; }
+.paper-list-row > div:first-child { display: flex; align-items: center; justify-content: flex-start; }
+.paper-list-row .ui-badge { white-space: nowrap; line-height: 1.4; }
+@media (min-width: 768px) and (max-width: 1100px) {
+  .featured-note-meta { grid-column: 1 / span 2; }
+  .featured-note-copy { grid-column: 3 / span 5; padding-right: 14px; }
+  .featured-note-figure { grid-column: 8 / -1; }
+}
+@media (max-width: 767px) {
+  .featured-note-copy h2 { font-size: clamp(2rem, 9vw, 3rem); }
+  .featured-note-figure img { height: auto; width: 100%; }
+}
+
+.language-switch { display: inline-flex; align-items: center; justify-content: center; gap: 5px; padding: 7px 9px; min-height: 34px; border: 1px solid var(--line); border-radius: 4px; background: transparent; color: var(--muted); cursor: pointer; font: 500 .8rem var(--sans); flex-shrink: 0; white-space: nowrap; }
+.language-switch .active { color: var(--ink); font-weight: 700; }
+.public-nav { gap: 18px; }
+.public-nav .desktop-nav { margin-left: auto; }
+html[lang=zh-CN] .section-kicker, html[lang=zh-CN] .nav-group { letter-spacing: .06em; }
+html[lang=zh-CN] .featured-note-copy h2 { line-height: 1.25; }
+@media(max-width: 1100px) { .public-nav .desktop-nav { display: none; }.public-nav .mobile-menu-button { display: grid; }.public-nav .language-switch { margin-left: auto; } }
+@media(max-width: 767px) { .dashboard-topbar .command-search { display: none; }.dashboard-topbar .language-switch { margin-left: auto; order: 2; } }
+.login-language { position: absolute; top: 24px; right: 24px; }
