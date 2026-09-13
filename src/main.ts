@@ -8,6 +8,7 @@ import { useSiteContentStore } from './stores/siteContent'
 import { useWorkspaceStore } from './stores/workspace'
 import './styles/main.css'
 import './styles/visual-polish.css'
+import './styles/palette.css'
 
 const app = createApp(App)
 app.config.globalProperties.$t = t

@@ -1,0 +1,86 @@
+/* Quiet mineral accents: warm canvas, blue navigation, sage infrastructure. */
+:root {
+  --paper: #f5f3ed;
+  --paper-2: #eae8df;
+  --ink: #202b30;
+  --muted: #67716f;
+  --line: #d7dcd4;
+  --accent: #31566a;
+  --accent-soft: #e0e9e9;
+}
+.dark {
+  --paper: #182123;
+  --paper-2: #222e30;
+  --ink: #eeeFE8;
+  --muted: #a9b7b4;
+  --line: #374749;
+  --accent: #a0c3ca;
+  --accent-soft: #2b424a;
+}
+.public-shell .featured-note { background: #294b60; }
+.dark .public-shell .featured-note { background: #233e4d; }
+.public-shell .research-vocabulary { background: color-mix(in srgb, var(--accent-soft) 45%, var(--paper)); }
+.public-shell .public-tool-card { background: color-mix(in srgb, var(--accent-soft) 20%, var(--paper)); }
+.public-shell .public-tool-card:hover { background: color-mix(in srgb, var(--accent-soft) 55%, var(--paper)); }
+
+.dashboard-shell {
+  --dash-bg: #f2f5f4;
+  --dash-panel: #ffffff;
+  --dash-ink: #24343e;
+  --dash-muted: #65767d;
+  --dash-line: #dce5e3;
+  --accent: #365f70;
+  --accent-soft: #e5eef0;
+  --dash-sage: #eaf2ee;
+  --dash-sand: #f5f0e5;
+  --dash-lilac: #eeedf5;
+  --paper: #fff;
+  --paper-2: #edf3f3;
+  --ink: var(--dash-ink);
+  --muted: var(--dash-muted);
+  --line: var(--dash-line);
+}
+.dashboard-sidebar { background: #eaf0f0; border-color: var(--dash-line); }
+.dashboard-brand, .sidebar-footer { border-color: #d6e1e0; }
+.dashboard-topbar { background: rgba(246,249,247,.95); }
+.dashboard-shell .brand-mark, .dashboard-shell .user-avatar { background: #365b69; }
+.dashboard-nav a { color: #526c75; }
+.dashboard-nav a:hover { background: #f7faf9; }
+.dashboard-nav a.router-link-exact-active,
+.dashboard-nav a.router-link-active:not([href='/dashboard']) {
+  background: #dce9eb;
+  color: #244e60;
+  box-shadow: inset 3px 0 #648d9b;
+}
+.dashboard-shell .ui-button--primary { background: #365f70; }
+.dashboard-shell .ui-button--primary:hover { background: #294b5c; }
+.dashboard-shell .ui-button--secondary { border-color: #d5e1e1; color: #3d5e69; }
+.dashboard-shell .ui-button--secondary:hover { background: #edf4f3; }
+.dashboard-shell .ui-badge { background: #edf0f1; color: #526671; }
+.dashboard-shell .ui-badge--info { background: #e4edf5; color: #3b6183; }
+.dashboard-shell .ui-badge--success { background: #e5f0e9; color: #386b55; }
+.dashboard-shell .ui-badge--warning { background: #f5eddb; color: #84612b; }
+.dashboard-shell .ui-badge--danger { background: #f6e7e4; color: #975149; }
+.dashboard-shell .stat-row { background: #f9fbfa; border-color: var(--dash-line); }
+.dashboard-shell .stat-row article { box-shadow: inset 0 3px #97b3c1; }
+.dashboard-shell .stat-row article:nth-child(2) { box-shadow: inset 0 3px #9dbdae; }
+.dashboard-shell .stat-row article:nth-child(3) { box-shadow: inset 0 3px #c8b694; }
+.dashboard-shell .stat-row article:nth-child(4) { box-shadow: inset 0 3px #b0aac5; }
+.dashboard-shell .stat-row article:nth-child(2) svg { color: #5c8874; }
+.dashboard-shell .stat-row article:nth-child(3) svg { color: #967d54; }
+.dashboard-shell .stat-row article:nth-child(4) svg { color: #7b729b; }
+.dashboard-shell .overview-panel > header { background: #edf3f6; }
+.dashboard-shell .server-status-panel > header { background: var(--dash-sage); }
+.dashboard-shell .papers-panel > header { background: var(--dash-sand); }
+.dashboard-shell .documents-panel > header { background: var(--dash-lilac); }
+.dashboard-shell :is(.paper-list-head, .content-editor > header, .server-meta) { background: #f0f5f4; }
+.dashboard-shell :is(.paper-tabs button.active, .content-section-list button.active) { background: #e3eef0; color: #315c6a; }
+.dashboard-shell :is(.record-row.active, .record-row:hover, .paper-list-row:hover) { background: #f0f6f5; }
+.dashboard-shell .server-icon, .dashboard-shell .integration-icon { background: #e2eeea; color: #4d786d; }
+.dashboard-shell .resource-bars em { background: #648999; }
+.dashboard-shell .resource-bars > div:nth-child(2) em { background: #79a08c; }
+.dashboard-shell .resource-bars > div:nth-child(3) em { background: #b5a076; }
+.dashboard-shell .server-card.is-primary { border-color: #9db9b5; box-shadow: 0 0 0 2px rgba(100,145,135,.08); }
+.dashboard-shell .integration-row { border-color: var(--dash-line); }
+.dashboard-shell :is(input, textarea, select) { accent-color: #527f88; }
+.dashboard-shell :is(button, a, input, textarea, select):focus-visible { outline-color: #527f88; }
