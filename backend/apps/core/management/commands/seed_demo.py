@@ -20,25 +20,9 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def handle(self, *args, **options):
-        User = get_user_model()
-        username = os.environ.get("DJANGO_SUPERUSER_USERNAME", "admin")
-        email = os.environ.get("DJANGO_SUPERUSER_EMAIL", "syins.yibinory@example.com")
-        password = os.environ.get("DJANGO_SUPERUSER_PASSWORD", "change-this-admin-password")
-        user, created = User.objects.get_or_create(username=username, defaults={"email": email, "is_staff": True, "is_superuser": True})
-        changed = False
-        if user.email != email:
-            user.email = email
-            changed = True
-        if not user.is_staff or not user.is_superuser:
-            user.is_staff = True
-            user.is_superuser = True
-            changed = True
-        if created or not user.has_usable_password():
-            user.set_password(password)
-            changed = True
-        if changed:
-            user.save()
-
+        from django.core.management import call_command
+        call_command('bootstrap')
+        email = os.environ.get('DJANGO_SUPERUSER_EMAIL', '')
         SiteProfile.objects.get_or_create(pk=1, defaults={
             "name": "Syins Yibinory",
             "title": "Medical imaging researcher",

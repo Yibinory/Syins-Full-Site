@@ -1,0 +1,5 @@
+services:
+  backend:
+    image: ghcr.io/yibinory/syins-full-site-backend:${IMAGE_TAG:-latest}
+  frontend:
+    image: ghcr.io/yibinory/syins-full-site-frontend:${IMAGE_TAG:-latest}

@@ -1,4 +1,5 @@
 import uuid
+import os
 
 from django.db import transaction
 from rest_framework import status, viewsets
@@ -13,6 +14,7 @@ from .serializers import CurrentResearchItemSerializer, ResearchProjectSerialize
 def content_payload():
     profile = SiteProfile.get_solo()
     payload = SiteProfileSerializer(profile).data
+    payload["defaultLanguage"] = "zh" if os.environ.get("SITE_LANGUAGE") == "zh" else "en"
     payload["selectedProjects"] = ResearchProjectSerializer(ResearchProject.objects.all(), many=True).data
     payload["currentResearch"] = CurrentResearchItemSerializer(CurrentResearchItem.objects.filter(enabled=True), many=True).data
     return payload

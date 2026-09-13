@@ -1,10 +1,10 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { locale } from '@/i18n'
+import { locale, setLocale, hasSavedLocale } from '@/i18n'
 import { resolveContent } from '@/services/localizedContent'
 import { profile } from '@/modules/profile/data'
 import { http } from '@/services/http'
-import { localStorageJson, saveLocalStorageJson } from '@/services/api'
+import { saveLocalStorageJson } from '@/services/api'
 
 export interface ResearchProject {
   id: string
@@ -21,6 +21,7 @@ export interface ResearchProject {
 }
 
 export interface SiteContent {
+  defaultLanguage?: 'en' | 'zh'
   translations?: Record<string, Record<string, string>>
   papersHeading: string
   papersDescription: string
@@ -58,30 +59,23 @@ export interface SiteContent {
 
 const defaults: SiteContent = {
   papersHeading: 'Papers worth returning to.',
-  papersDescription: 'A reading collection on medical imaging, generalization and generation. Recommendations, context and linked notes, newest first.',
+  papersDescription: 'A reading collection with recommendations, context, and linked notes.',
   toolsHeading: 'Tools & resources.',
   toolsDescription: 'A collection of useful external pages and research tools.',
   name: profile.name,
-  title: 'Medical imaging researcher',
+  title: 'Independent researcher',
   location: profile.location,
   email: profile.email,
   headline: profile.headline,
   bio: profile.bio,
-  researchDirections: 'Medical Image Processing × Domain Generalization × Image Generation',
-  featuredResearchIntro: 'Exploring how medical images can be processed, generalized across domains, and generated.',
-  selectedProjects: [
-    { id: 'longitudinal', title: 'Longitudinal worlds of disease progression', motivation: 'Can a generative model learn plausible futures without losing the patient in the process?', approach: 'We investigate time-aware latent representations for synthesizing anatomically consistent follow-up images from incomplete clinical histories.', status: 'Active', mediaType: 'image', mediaUrl: '/images/longitudinal-mri-mock.png', mediaAlt: 'Illustrative longitudinal MRI sequence', caption: 'Illustrative placeholder · AI-generated imagery, not experimental results', links: [{ label: 'Project', url: '' }, { label: 'Preprint', url: '' }] },
-    { id: 'generalization', title: 'Generalization beyond the hospital we know', motivation: 'What should a model remember when the scanner, protocol, and population all change?', approach: 'We study invariant anatomy and uncertain appearance across unseen domains in medical segmentation.', status: 'Ongoing', mediaType: 'image', mediaUrl: '/images/domain-generalization.svg', mediaAlt: 'Two source hospitals contribute to a shared model evaluated on an unseen hospital', caption: 'Conceptual illustration · Cross-hospital generalization', links: [{ label: 'Paper', url: '' }, { label: 'Code', url: '' }] },
-  ],
-  currentResearch: [
-    { id: 1, number: '01', title: 'Medical Image Generation', text: 'Controllable generative models that preserve anatomy while exposing clinically meaningful variation.', status: 'Active', question: 'How can pathology change without silently changing patient identity?', method: 'Anatomy-conditioned diffusion · Counterfactual editing', updated: 'Updated 2 days ago' },
-    { id: 2, number: '02', title: 'Longitudinal Image Modeling', text: 'Learning patient-specific trajectories to model disease progression across sparse clinical timepoints.', status: 'Exploring', question: 'What does a plausible future image look like when observations are sparse and irregular?', method: 'Temporal latent models · Calibrated uncertainty', updated: 'Updated today' },
-    { id: 3, number: '03', title: 'Domain Generalization', text: 'Robust representations that transfer across scanners, institutions, and unseen acquisition protocols.', status: 'Active', question: 'Which visual features survive a change of hospital, scanner, and population?', method: 'Invariant representation learning · OOD evaluation', updated: 'Updated 5 days ago' },
-  ],
+  researchDirections: 'Research × Learning × Discovery',
+  featuredResearchIntro: 'Projects and the questions behind them.',
+  selectedProjects: [],
+  currentResearch: [],
   currentResearchHeading: 'Questions I’m working on now.',
-  featuredResearchHeading: 'Images as evidence.',
+  featuredResearchHeading: 'Selected research.',
   publicationsHeading: 'Selected papers and preprints.',
-  publicationsDescription: 'Work on generalizable representation learning, longitudinal modeling, and controllable medical image generation.',
+  publicationsDescription: 'A growing collection of published work.',
   notesHeading: 'Ideas in progress, organized to last.',
   notesDescription: 'Research notes, essays, practical guides, and living references—kept in one public library.',
   scholarUrl: '#',
@@ -90,12 +84,11 @@ const defaults: SiteContent = {
 }
 
 export const useSiteContentStore = defineStore('site-content', () => {
-  const persisted = localStorageJson<Partial<SiteContent>>('research-os:site-content', {})
   const content = ref<SiteContent>({
     ...structuredClone(defaults),
-    ...persisted,
-    selectedProjects: persisted.selectedProjects ?? structuredClone(defaults.selectedProjects),
-    currentResearch: persisted.currentResearch ?? structuredClone(defaults.currentResearch),
+
+    selectedProjects: [],
+    currentResearch: [],
   })
   const lastSavedAt = ref(localStorage.getItem('research-os:site-content-saved-at') ?? '')
   const apiLoaded = ref(false)
@@ -107,6 +100,7 @@ export const useSiteContentStore = defineStore('site-content', () => {
     try {
       const response = await http.get<SiteContent>('/site/content/')
       content.value = response.data
+      if (!hasSavedLocale) setLocale(response.data.defaultLanguage === 'zh' ? 'zh' : 'en')
       apiLoaded.value = true
       saveLocalStorageJson('research-os:site-content', content.value)
     } catch {

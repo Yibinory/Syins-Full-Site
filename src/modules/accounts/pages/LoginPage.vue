@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useWorkspaceStore } from '@/stores/workspace'
 import LanguageSwitch from '@/components/shared/LanguageSwitch.vue'
 import { ArrowLeft, ArrowRight, LockKeyhole } from 'lucide-vue-next'
 import { ref } from 'vue'
@@ -16,6 +17,7 @@ const auth = useAuthStore()
 async function submit() {
   error.value = ''
   if (!await auth.login(email.value, password.value)) { error.value = 'Invalid email or password.'; return }
+  await useWorkspaceStore().hydrate(true)
   router.push(typeof route.query.redirect === 'string' ? route.query.redirect : '/dashboard')
 }
 </script>
@@ -29,7 +31,7 @@ async function submit() {
       <h1>{{ $t("Research OS") }}</h1>
       <p class="login-copy">{{ $t("Your literature, research, servers, and working documents in one quiet place.") }}</p>
       <form @submit.prevent="submit">
-        <label>{{ $t("Email") }}<input v-model="email" type="email" autocomplete="username" :placeholder="$t('Administrator email')" /></label>
+        <label>{{ $t("Username or email") }}<input v-model="email" type="text" autocomplete="username" :placeholder="$t('Username or email')" /></label>
         <label>{{ $t("Password") }}<input v-model="password" type="password" autocomplete="current-password" :placeholder="$t('Password')" /></label>
         <p v-if="error" class="form-error">{{ $t(error) }}</p>
         <AppButton type="submit">{{ $t("Enter workspace") }} <ArrowRight :size="16" /></AppButton>

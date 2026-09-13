@@ -9,6 +9,8 @@ python manage.py migrate --noinput
 echo "Collecting static files..."
 python manage.py collectstatic --noinput
 
+python manage.py bootstrap
+
 if [ "${SEED_DEMO:-false}" = "true" ]; then
   echo "Ensuring the initial Research OS workspace exists..."
   python manage.py seed_demo

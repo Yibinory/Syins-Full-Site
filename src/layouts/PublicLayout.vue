@@ -27,8 +27,8 @@ const toggleTheme = () => { mode.value = mode.value === 'dark' ? 'light' : 'dark
         <RouterLink to="/papers"><small>04</small> {{ $t("Recommended") }}</RouterLink>
         <RouterLink to="/tools"><small>05</small> {{ $t("Tools") }}</RouterLink>
         <span class="nav-divider" />
-        <a :href="siteContent.localized.scholarUrl">{{ $t("Scholar ↗") }}</a>
-        <a :href="siteContent.localized.githubUrl">{{ $t("GitHub ↗") }}</a>
+        <a v-if="siteContent.localized.scholarUrl" :href="siteContent.localized.scholarUrl">{{ $t("Scholar ↗") }}</a>
+        <a v-if="siteContent.localized.githubUrl" :href="siteContent.localized.githubUrl">{{ $t("GitHub ↗") }}</a>
         <button class="theme-button" type="button" :aria-label="$t('Toggle color theme')" @click="toggleTheme">
           <Sun v-if="mode === 'dark'" :size="16" />
           <Moon v-else :size="16" />

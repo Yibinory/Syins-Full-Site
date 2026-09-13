@@ -8,8 +8,8 @@ from apps.core.models import MediaAsset
 class SiteProfile(models.Model):
     translations = models.JSONField(default=dict, blank=True)
     id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
-    name = models.CharField(max_length=120, default="Syins Yibinory")
-    title = models.CharField(max_length=180, default="Medical imaging researcher")
+    name = models.CharField(max_length=120, default="Research Space")
+    title = models.CharField(max_length=180, default="Independent researcher")
     location = models.CharField(max_length=120, blank=True)
     email = models.EmailField(blank=True)
     headline = models.TextField(blank=True)

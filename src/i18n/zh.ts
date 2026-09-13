@@ -1,4 +1,8 @@
 export default {
+  'Welcome back': '欢迎回来',
+  'Username or email': '用户名或邮箱',
+  'Research projects will appear here.': '研究项目将在这里展示。',
+  'Publications will appear here.': '发表成果将在这里展示。',
   'Content language': '内容语言',
   'Empty fields fall back to the other language, then “-”. Links and email are shared.': '未填写时显示另一种语言；两种都为空则显示“-”。链接和邮箱共用。',
   'CPU model': 'CPU 型号',

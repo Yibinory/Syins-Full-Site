@@ -27,41 +27,101 @@ English version: [README.md](README.md)
 - 使用 Nginx、PostgreSQL、媒体持久化卷的 Docker Compose 部署
 - 一键安装、更新和备份脚本
 
-## Docker 快速启动
+## 引导安装（Linux / macOS / Windows）
 
-要求：Docker Engine 或 Docker Desktop，以及 Compose v2。
+需要 Git、**Python 3.9+**、已启动的 Docker Engine/Desktop 和 Compose v2。
+Windows 使用 Docker Desktop 的 **Linux 容器模式**；macOS 先启动 Docker Desktop。
+安装器会检查依赖，不会静默修改系统来安装 Docker；Docker 首次安装可能需要管理员权限或重启。
 
-```bash
-cp .env.example .env
-# 修改 DJANGO_SECRET_KEY、POSTGRES_PASSWORD 和 DJANGO_SUPERUSER_PASSWORD。
-# 如果使用自定义域名，还需要修改 DJANGO_ALLOWED_HOSTS 和 DJANGO_CSRF_TRUSTED_ORIGINS。
-sh scripts/install.sh
-```
-
-启动后访问：<http://localhost:8080/>。
-
-首次启动会执行数据库 migration 和静态文件收集；当 `SEED_DEMO=true` 时，还会创建管理员和缺失的示例记录。示例数据初始化是非破坏性的，不会覆盖已有内容，因此升级时可以暂时保持开启。确定不再需要示例数据后，可将其改为 `false`。
-
-如果当前终端找不到 Docker Desktop CLI，可以先加入 Docker 的命令路径：
+Linux / macOS 一行克隆并启动向导：
 
 ```bash
-export PATH="/Applications/Docker.app/Contents/Resources/bin:/Applications/Docker.app/Contents/Resources/cli-plugins:$PATH"
+git clone https://github.com/Yibinory/Syins-Full-Site.git && cd Syins-Full-Site && sh scripts/install.sh
 ```
 
-### 更新已部署项目
+Windows PowerShell：
+
+```powershell
+git clone https://github.com/Yibinory/Syins-Full-Site.git
+cd Syins-Full-Site
+powershell -ExecutionPolicy Bypass -File scripts/install.ps1
+```
+
+向导设置站点名称、默认语言、管理员用户名、可选邮箱、密码（至少 12 位）和可选公开主机名/IP。
+数据库密码及应用密钥自动随机生成，保存在已忽略的 `.env` 中，不在终端输出密码。
+请妥善保护此文件；Windows 的文件访问权限由所在目录的 ACL 控制。
+
+**使用向导前不要复制 `.env.example`**：检测到已有 `.env` 时会保留它并跳过初始化提问。
+也可手动准备 `.env`，但必须自行替换全部占位密码。重复运行及升级均保留账户、内容与数据卷，
+不会重设密码或自动导入示例。
+
+新安装只有管理员、通用双语首页和自动登记的部署主机。发表论文、推荐论文、笔记、研究项目、外部页面等业务记录为空。
+首次登录后在 **Dashboard → 站点内容** 编辑首页。默认语言用于首次访问；用户在浏览器中明确选择过的语言优先。
+
+### 端口选择与启动检查
+
+网站优先尝试 8080，被占用时向后搜索最多 99 个端口。首次安装实际绑定失败也会重新选择并重试。
+最终端口及对应 CSRF 来源写入 `.env`。安装器通过 Nginx 检查后端公开 API 成功后，才输出就绪和访问地址。
+请使用安装器输出的地址，不要默认认为一定是 8080。
+
+```bash
+sh scripts/install.sh --port 8090
+# 可选：同时开放仅本机能连接的数据库端口
+sh scripts/install.sh --port 8090 --database-port 5432
+```
+
+PowerShell 支持同样的参数。数据库默认不映射宿主机端口，网站端口映射到宿主机接口。
+公开主机名/IP 会写入 Django 允许列表，但不会自动配置域名解析、防火墙、路由器转发或 HTTPS。
+HTTPS 部署还需配置 `DJANGO_ALLOWED_HOSTS`、`DJANGO_CSRF_TRUSTED_ORIGINS` 和安全 Cookie。
+该输入目前支持 DNS 主机名及 IPv4 地址。
+
+自动选端口只用于**新安装**，已有安装保留原端口，避免地址意外改变。本阶段不包含 Dashboard 动态修改端口。
+
+### 源码构建与预构建镜像
+
+默认从当前代码通过 Docker 在本机构建。轻负载运行可按约 2GB 内存规划；部署机器同时构建时建议留更多余量，4GB 更宽裕。
+
+新增 `.github/workflows/images.yml`：推送 `v*` 标签或手动运行时，构建并发布 **linux/amd64 和 linux/arm64**
+后端/前端镜像到 GHCR。**本次代码只提供发布流程，并不代表镜像已经发布。**
+维护者需要先运行工作流，并将 GHCR 包设为公开，其他人才能匿名拉取。
+Fork 项目需要修改 `docker-compose.images.yml` 中的镜像仓库地址。
+
+实际发布标签后可免本机构建安装：
+
+```bash
+sh scripts/install.sh --version v1.0.0  # 示例，替换为真实已发布的标签
+```
+
+首次安装使用 `--source` 可明确选择源码构建。安装模式、Compose 文件组合及镜像版本保存在 `.env`，升级沿用。
+固定版本升级时手动修改 `IMAGE_TAG`；`latest` 跟随最近一次工作流发布。
+
+### 升级、示例内容与故障恢复
 
 ```bash
 git pull
 sh scripts/update.sh
-```
-
-更新会保留 PostgreSQL 和媒体 volume。进行风险较高的升级前，建议先备份：
-
-```bash
 sh scripts/backup.sh
 ```
 
-备份写入 `data/backups/`，并应复制到独立机器或其他存储位置。
+Windows 升级使用 `powershell -ExecutionPolicy Bypass -File scripts/update.ps1`。
+Windows 也可使用 Dashboard 的备份下载功能；Shell 备份存放在 `data/backups/`，建议另存到其他机器。
+
+需要演示内容时主动执行：
+
+```bash
+docker compose exec backend python manage.py seed_demo
+```
+
+这会添加样例业务记录，不改变已有管理员凭据。默认 `SEED_DEMO=false`，保持关闭以免重启时重新补回删掉的示例。
+账户初始化已独立为 `bootstrap`，发现已有用户就跳过，不覆盖现有站点。
+若数据库已有用户但没有管理员，需明确执行 `manage.py createsuperuser`；安装器不会擅自提升已有用户权限。
+
+失败后先执行 `docker compose ps`、`docker compose logs backend`，修正 `.env` 后可重新运行安装器。
+改环境变量不会重设已存在的账户密码。需要保留数据时，不要用 `docker compose down -v` 排障。
+
+物理主机采样是可选项：Linux/macOS 可运行 `sh scripts/monitor-host.sh start`，必要时设置 `PYTHON_BIN`。
+未启用时会明确显示后端/容器运行环境指标，不将其称为物理主机数据。
+Windows 原生硬件采样尚未实现，网站可以通过 Linux 容器正常运行，也支持远程 Linux SSH 监控。
 
 ## 本地开发
 
@@ -72,7 +132,7 @@ python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 cd backend
 ../.venv/bin/python manage.py migrate
-DJANGO_SUPERUSER_PASSWORD='change-me' ../.venv/bin/python manage.py seed_demo
+DJANGO_SUPERUSER_PASSWORD='use-a-unique-12-character-password' ../.venv/bin/python manage.py bootstrap
 ../.venv/bin/python manage.py runserver 127.0.0.1:8000
 ```
 

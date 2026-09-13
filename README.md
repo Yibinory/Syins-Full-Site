@@ -2,7 +2,7 @@
 
 中文文档：[README.zh-CN.md](README.zh-CN.md)
 
-Syins Research OS is a personal research portfolio and private research workspace for Syins Yibinory. The public site presents research directions, publications and public Notes; the private Dashboard manages the underlying records, recommended-paper memory, documents, media and server inventory.
+Syins Research OS is a personal research portfolio and private research workspace for researchers. The public site presents research directions, publications and public Notes; the private Dashboard manages the underlying records, recommended-paper memory, documents, media and server inventory.
 
 The project follows the principle:
 
@@ -26,33 +26,132 @@ The project follows the principle:
 - Database migrations, idempotent demo seed data and automated API tests
 - Docker Compose deployment with Nginx, persistent PostgreSQL/media volumes, update and backup scripts
 
-## Quick start with Docker
+## Guided installation (Linux, macOS, Windows)
 
-Requirements: Docker Engine/Desktop with Compose v2.
+Requirements: Git, Python **3.9+**, and a running Docker Engine/Desktop with
+Compose v2. On Windows use Docker Desktop in **Linux containers** mode. On
+macOS Docker Desktop must be started before running the installer. Docker
+installation itself may require administrator privileges or a restart; this
+installer checks prerequisites rather than silently changing the host system.
+
+Linux / macOS — clone and start the wizard:
 
 ```bash
-cp .env.example .env
-# Edit DJANGO_SECRET_KEY, POSTGRES_PASSWORD and DJANGO_SUPERUSER_PASSWORD.
-# For a custom domain, also update DJANGO_ALLOWED_HOSTS and DJANGO_CSRF_TRUSTED_ORIGINS.
-sh scripts/install.sh
+git clone https://github.com/Yibinory/Syins-Full-Site.git && cd Syins-Full-Site && sh scripts/install.sh
 ```
 
-Open <http://localhost:8080/>. The first startup runs migrations and creates the administrator plus missing demo records when `SEED_DEMO=true`. The seed command is non-destructive: existing content is not overwritten, so it is safe to leave enabled during upgrades. Set it to `false` when you no longer want new demo records to be added.
+Windows PowerShell:
 
-To update a deployed checkout:
+```powershell
+git clone https://github.com/Yibinory/Syins-Full-Site.git
+cd Syins-Full-Site
+powershell -ExecutionPolicy Bypass -File scripts/install.ps1
+```
+
+The wizard asks for site name, default language, administrator username,
+optional email, a password (12+ characters), and optional public hostname/IP.
+Database credentials and application secrets are randomly generated. They are
+stored in the ignored `.env` file; passwords are not printed. Protect this
+file, particularly on Windows where local access depends on directory ACLs.
+
+Do **not** copy `.env.example` before using the wizard: an existing `.env` is
+intentionally preserved and skips all prompts. If preparing configuration
+manually, replace every placeholder yourself and run the same installer.
+Repeated installation and upgrades preserve accounts, content and data volumes;
+they do not reset passwords or automatically import examples.
+
+New workspaces contain an administrator, a generic bilingual homepage and an
+automatically registered deployment host. Publications, recommended papers,
+notes, research projects and integrations start empty. Configure the homepage
+in **Dashboard → Site content**. The default language is applied to first-time
+visitors; an explicitly selected browser language takes precedence.
+
+### Ports and readiness
+
+The website tries port 8080, then searches the next 99 ports if occupied.
+An actual bind failure during first installation is retried with a new port.
+The chosen port and CSRF origins are persisted in `.env`. Completion is reported
+only after the public API responds through Nginx. Use the exact URL printed by
+the installer, not a presumed 8080 URL.
+
+```bash
+sh scripts/install.sh --port 8090
+# Optionally publish PostgreSQL to this machine only:
+sh scripts/install.sh --port 8090 --database-port 5432
+```
+
+PowerShell accepts the same arguments. The database is **not published by
+default**; the frontend is published to host interfaces. A configured public
+hostname/IP permits that host in Django but does not configure HTTPS, DNS,
+firewalls, or router forwarding. For production HTTPS set the appropriate
+`DJANGO_ALLOWED_HOSTS`, `DJANGO_CSRF_TRUSTED_ORIGINS`, and secure cookie options.
+The installer currently accepts DNS hostnames and IPv4 addresses for this prompt.
+
+The installer searches ports only for a **new installation**. An existing
+installation keeps its port to avoid unexpectedly changing its address.
+Dashboard port editing is not part of this release.
+
+### Source builds and prebuilt images
+
+The default installs from this checkout with local Docker builds. Plan for
+roughly 2 GB RAM for light operation and additional headroom during builds;
+4 GB is more comfortable when building on the deployment machine.
+
+The release workflow `.github/workflows/images.yml` publishes backend/frontend
+images for **linux/amd64 and linux/arm64** to GitHub Container Registry on `v*`
+tags or manual dispatch. This code change supplies the workflow; it does not
+itself publish a release or guarantee that an image tag already exists. The
+maintainer must run the workflow and make the GHCR packages public before
+anonymous image installation works. Forks should update the image repository
+names in `docker-compose.images.yml`.
+
+Once a tag has been published, install without building locally:
+
+```bash
+sh scripts/install.sh --version v1.0.0  # example: use an actually published tag
+```
+
+Use `--source` to select local builds on first installation. The selected
+Compose files and image tag are saved in `.env`; updates use the same mode.
+For existing installations change `IMAGE_TAG` explicitly when upgrading to a
+new version. `latest` follows the last workflow publication.
+
+### Updates, demo data, and recovery
 
 ```bash
 git pull
 sh scripts/update.sh
-```
-
-The update preserves the PostgreSQL and media volumes. Before a risky update, create a backup:
-
-```bash
 sh scripts/backup.sh
 ```
 
-Backups are written to `data/backups/` and should be copied to a separate machine.
+On Windows use `powershell -ExecutionPolicy Bypass -File scripts/update.ps1`.
+The Dashboard backup download is also available on Windows. Shell backups are
+written to `data/backups/`; keep another copy on a separate machine.
+
+Demo records are an explicit opt-in:
+
+```bash
+docker compose exec backend python manage.py seed_demo
+```
+
+This adds sample business records without changing existing administrator
+credentials. `SEED_DEMO=false` is the default; keep it false to avoid filling
+in deleted demo records on restarts. Initialization uses the separate
+`bootstrap` command and skips existing workspaces. An installation with users
+but no administrator needs an explicit `manage.py createsuperuser` action;
+the installer does not promote an existing account.
+
+For a failed installation run `docker compose ps` and `docker compose logs
+backend`. Fix `.env` if needed and rerun the installer. Existing credentials
+are not reset by changing environment variables. Never run `docker compose
+down -v` to troubleshoot an installation whose data you want to retain.
+
+Optional physical-host metrics: on Linux/macOS run `sh scripts/monitor-host.sh
+start` (or set `PYTHON_BIN` to a Python executable). Without the sampler,
+monitoring identifies backend/container runtime metrics rather than claiming
+they describe the physical host. Native Windows hardware sampling is not
+implemented; the application still runs through Linux containers, and remote
+Linux SSH monitoring remains available.
 
 ## Local development
 
@@ -62,7 +161,7 @@ python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 cd backend
 ../.venv/bin/python manage.py migrate
-DJANGO_SUPERUSER_PASSWORD='change-me' ../.venv/bin/python manage.py seed_demo
+DJANGO_SUPERUSER_PASSWORD='use-a-unique-12-character-password' ../.venv/bin/python manage.py bootstrap
 ../.venv/bin/python manage.py runserver 127.0.0.1:8000
 ```
 

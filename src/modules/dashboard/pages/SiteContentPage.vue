@@ -8,7 +8,7 @@ import { useSiteContentStore, type SiteContent } from '@/stores/siteContent'
 
 import { editContent } from '@/services/localizedContent'
 
-type ContentKey = Exclude<keyof SiteContent, 'selectedProjects' | 'currentResearch' | 'translations'>
+type ContentKey = Exclude<keyof SiteContent, 'selectedProjects' | 'currentResearch' | 'translations' | 'defaultLanguage'>
 interface ContentField { key: ContentKey; label: string; multiline?: boolean; help?: string }
 interface ContentSection { id: string; label: string; description: string; icon: typeof Home; fields: ContentField[] }
 

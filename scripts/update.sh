@@ -9,7 +9,11 @@ if [ ! -f .env ]; then
   exit 1
 fi
 
-docker compose build --pull
+if grep -q 'docker-compose.images.yml' .env; then
+  docker compose pull
+else
+  docker compose build --pull
+fi
 docker compose up -d
 docker compose ps
 echo "Update complete. Database migrations ran in the backend startup process."

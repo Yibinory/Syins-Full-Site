@@ -3,9 +3,8 @@ import { ref, toRaw } from 'vue'
 import { http } from '@/services/http'
 import { listData, localStorageJson, saveLocalStorageJson } from '@/services/api'
 import { useAuthStore } from './auth'
-import { papers as paperSeeds, type Paper } from '@/modules/papers/data'
-import { publications as publicationSeeds, type Publication } from '@/modules/publications/data'
-import { publicNotes } from '@/modules/documents/data'
+import { type Paper } from '@/modules/papers/data'
+import { type Publication } from '@/modules/publications/data'
 import type { PublicNote, NoteKind } from '@/modules/documents/types'
 import type { Server } from '@/modules/servers/data'
 
@@ -44,9 +43,6 @@ export const normalizeTags = (tags: string[]) => [...new Map(tags.map(t => t.tri
 export const newId = () => Date.now() + Math.floor(Math.random() * 1000)
 export const today = () => new Date().toISOString().slice(0, 10)
 
-const seededPapers = paperSeeds.map(p => ({ ...structuredClone(p), noteIds: [], paperUrl: p.arxivId ? `https://arxiv.org/abs/${p.arxivId}` : '' }))
-const seededPublications = publicationSeeds.map(p => ({ ...structuredClone(p), slug: undefined, motivation: '', approach: '', abstract: '', paperUrl: '', codeUrl: '', projectUrl: '', bibtex: '', mediaType: 'image' as const, mediaUrl: p.image || '', mediaAlt: p.title, caption: '', mediaAssetId: undefined }))
-const seededDocuments = publicNotes.map(n => ({ ...structuredClone(n), content: `# ${n.title}\n\n${n.excerpt}`, visibility: 'public' as const, updatedAt: n.publishedAt || today(), trashedAt: null }))
 const defaultSettings: WorkspaceSettings = { defaultNoteVisibility: 'private', defaultNoteKind: 'Research Note', pageSize: 20, siteTitle: 'Research OS' }
 
 function replaceRecord<T extends { id: number }>(records: T[], value: T) {
@@ -56,9 +52,9 @@ function replaceRecord<T extends { id: number }>(records: T[], value: T) {
 }
 
 export const useWorkspaceStore = defineStore('workspace', () => {
-  const papers = ref<ManagedPaper[]>(localStorageJson('research-os:papers', structuredClone(seededPapers)))
-  const publications = ref<ManagedPublication[]>(localStorageJson('research-os:publications', structuredClone(seededPublications)))
-  const documents = ref<Document[]>(localStorageJson('research-os:documents', structuredClone(seededDocuments)))
+  const papers = ref<ManagedPaper[]>([])
+  const publications = ref<ManagedPublication[]>([])
+  const documents = ref<Document[]>([])
   const servers = ref<Server[]>([])
   const tags = ref<WorkspaceTag[]>([])
   const settings = ref<WorkspaceSettings>(localStorageJson('research-os:preferences', structuredClone(defaultSettings)))
@@ -73,8 +69,9 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     saveLocalStorageJson('research-os:preferences', settings.value)
   }
 
-  async function hydrate() {
-    if (hydrated.value) return
+  async function hydrate(force = false) {
+    if (hydrated.value && !force) return
+    if (force) { papers.value = []; documents.value = []; servers.value = []; tags.value = []; apiLoaded.value = false }
     const auth = useAuthStore()
     try {
       const publicResponses = await Promise.all([

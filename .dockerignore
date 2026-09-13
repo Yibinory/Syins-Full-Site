@@ -16,3 +16,7 @@ dist
 sever_p.txt
 server_p.txt
 data/host-metrics
+
+.env.*
+!.env.example
+docker-compose.override.yml

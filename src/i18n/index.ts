@@ -2,6 +2,7 @@ import { ref, watch } from 'vue'
 import zh from './zh'
 export type Locale = 'en' | 'zh'
 function initialLocale(): Locale { try { return localStorage.getItem('research-os:locale') === 'zh' ? 'zh' : 'en' } catch { return 'en' } }
+export const hasSavedLocale = (() => { try { return ['en', 'zh'].includes(localStorage.getItem('research-os:locale') || '') } catch { return false } })()
 export const locale = ref<Locale>(initialLocale())
 export function t(value: unknown): string {
   const key = String(value ?? '')

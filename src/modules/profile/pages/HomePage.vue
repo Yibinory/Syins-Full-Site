@@ -40,14 +40,14 @@ function toggleLens() {
         <p class="hero-headline">{{ siteContent.localized.headline }}</p>
         <p class="hero-bio">{{ siteContent.localized.bio }}</p>
         <div class="hero-links">
-          <a v-for="link in [{ label: 'Google Scholar', href: siteContent.localized.scholarUrl }, { label: 'GitHub', href: siteContent.localized.githubUrl }, { label: 'Curriculum Vitae', href: siteContent.localized.cvUrl }]" :key="link.label" :href="link.href">{{ link.label }} <ArrowUpRight :size="15" /></a>
-          <a :href="`mailto:${siteContent.localized.email}`">{{ $t("Email") }} <ArrowUpRight :size="15" /></a>
+          <a v-for="link in [{ label: 'Google Scholar', href: siteContent.localized.scholarUrl }, { label: 'GitHub', href: siteContent.localized.githubUrl }, { label: 'Curriculum Vitae', href: siteContent.localized.cvUrl }].filter(link => link.href)" :key="link.label" :href="link.href">{{ link.label }} <ArrowUpRight :size="15" /></a>
+          <a v-if="siteContent.localized.email" :href="`mailto:${siteContent.localized.email}`">{{ $t("Email") }} <ArrowUpRight :size="15" /></a>
         </div>
       </div>
       <figure ref="portrait" class="portrait-wrap portrait-interactive" @pointermove="moveLens" @pointerenter="lens.visible = true" @pointerleave="lens.visible = lens.pinned" @click="toggleLens">
-        <img class="portrait-image" src="/images/syins-yibinory-portrait-mock.png" :alt="$t('Portrait of Syins Yibinory in a medical imaging research studio')" />
-        <div class="portrait-lens" :class="{ visible: lens.visible }" :style="lensStyle" aria-hidden="true"><span>{{ $t("RESEARCH LENS") }}</span></div>
-        <span class="lens-instruction">{{ $t("Move to reveal the research") }}</span>
+        <img class="portrait-image" :src="siteContent.localized.name === 'Syins Yibinory' ? '/images/syins-yibinory-portrait-mock.png' : '/images/research-placeholder.svg'" :alt="siteContent.localized.name" />
+        <div v-if="siteContent.localized.name === 'Syins Yibinory'" class="portrait-lens" :class="{ visible: lens.visible }" :style="lensStyle" aria-hidden="true"><span>{{ $t("RESEARCH LENS") }}</span></div>
+        <span v-if="siteContent.localized.name === 'Syins Yibinory'" class="lens-instruction">{{ $t("Move to reveal the research") }}</span>
         <span class="portrait-axis">{{ $t("SUBJECT — RESEARCHER") }}</span>
         <i class="portrait-corner portrait-corner--a" /><i class="portrait-corner portrait-corner--b" />
         <figcaption><span>{{ $t("FIG. HD—01 / 2026") }}</span><span>{{ $t("Researching images in motion") }}</span></figcaption>
@@ -67,6 +67,7 @@ function toggleLens() {
         <h2>{{ siteContent.localized.currentResearchHeading }}</h2>
       </div>
       <div class="research-list">
+        <p v-if="!currentResearch.length" class="muted-copy">{{ $t("No current research questions yet.") }}</p>
         <button v-for="(item, index) in currentResearch" :key="item.number" class="research-row" :class="{ active: activeResearch === index }" :aria-pressed="activeResearch === index" @mouseenter="activeResearch = index" @focus="activeResearch = index" @click="activeResearch = index">
           <span class="row-number">{{ item.number }}</span>
           <h3>{{ item.title }}</h3>
@@ -87,6 +88,7 @@ function toggleLens() {
         <h2>{{ siteContent.localized.featuredResearchHeading }}</h2>
         <p class="work-aside">{{ siteContent.localized.featuredResearchIntro }}</p>
       </div>
+      <p v-if="!siteContent.localized.selectedProjects.length" style="grid-column: 1 / -1" class="muted-copy">{{ $t("Research projects will appear here.") }}</p>
       <article v-for="(project, index) in siteContent.localized.selectedProjects" :key="project.id" class="feature-project" :class="{ 'feature-project--reverse': index % 2 === 1 }">
         <ResearchMedia :project="project" />
         <div class="project-copy">
@@ -110,7 +112,7 @@ function toggleLens() {
         <h2>{{ $t("Selected publications") }}</h2>
         <RouterLink to="/publications">{{ $t("View all publications") }} <ArrowUpRight :size="15" /></RouterLink>
       </div>
-      <div class="publication-list">
+      <div class="publication-list"><p v-if="!publications.length" class="muted-copy">{{ $t("Publications will appear here.") }}</p>
         <article v-for="paper in publications" :key="paper.title" class="publication-row">
           <div class="pub-year">{{ paper.year }}</div>
           <div><p class="pub-venue">{{ paper.venueShort }}</p><h3>{{ paper.title }}</h3><p class="pub-authors">{{ paper.authors }}</p><div class="tag-list"><span v-for="tag in paper.tags" :key="tag">{{ tag }}</span></div></div>
