@@ -32,6 +32,7 @@ services:
       - media_data:/app/data/uploads
       - backup_data:/app/data/backups
       - ./data/host-metrics:/app/data/host-metrics:ro
+      - ./data/deployment:/app/data/deployment
 
   frontend:
     build:

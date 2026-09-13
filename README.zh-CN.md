@@ -75,7 +75,7 @@ PowerShell 支持同样的参数。数据库默认不映射宿主机端口，网
 HTTPS 部署还需配置 `DJANGO_ALLOWED_HOSTS`、`DJANGO_CSRF_TRUSTED_ORIGINS` 和安全 Cookie。
 该输入目前支持 DNS 主机名及 IPv4 地址。
 
-自动选端口只用于**新安装**，已有安装保留原端口，避免地址意外改变。本阶段不包含 Dashboard 动态修改端口。
+自动选端口只用于**新安装**，已有安装保留原端口，避免地址意外改变。Dashboard 动态修改端口需要启动下文所述的宿主机管理进程。
 
 ### 源码构建与预构建镜像
 
@@ -122,6 +122,61 @@ docker compose exec backend python manage.py seed_demo
 物理主机采样是可选项：Linux/macOS 可运行 `sh scripts/monitor-host.sh start`，必要时设置 `PYTHON_BIN`。
 未启用时会明确显示后端/容器运行环境指标，不将其称为物理主机数据。
 Windows 原生硬件采样尚未实现，网站可以通过 Linux 容器正常运行，也支持远程 Linux SSH 监控。
+
+## 在 Settings 中修改部署端口
+
+部署管理员（Django 超级用户）可在 **Dashboard → 设置 → 部署端口** 调整网站访问端口，
+以及是否开放仅本机能访问的 PostgreSQL 端口。容器内部端口保持固定。
+该功能需要 **Docker Compose 2.24.4 或更新版本**。
+
+安装器会在站点就绪后启动独立的宿主机管理进程。已有安装先更新 Compose 部署，以挂载
+`data/deployment`，然后运行：
+
+```bash
+python3 scripts/deployment_manager.py start
+python3 scripts/deployment_manager.py status
+```
+
+Windows 将 `python3` 替换为 `py -3`。管理进程需要操作当前项目的 Docker Compose 权限，
+只接受经过校验的网站/数据库端口请求；不会将 Docker socket 或任意命令执行能力交给 Django。
+
+点击应用会短暂重启相关服务。管理进程依次检查占用、更新 `.env` 与私有 Compose 覆盖配置、
+应用映射，并通过新端口检查公开 API。失败会恢复原配置和端口。事务记录支持进程中断后的恢复，
+整个流程不会删除数据库数据卷。
+
+网站端口切换后，旧浏览器标签可能断开连接，点击**打开新的直连地址**，在新地址的设置页检查结果。
+使用反向代理时继续使用原域名，并单独调整代理上游端口。
+不会自动改变 DNS、TLS、防火墙或路由器转发，本机健康检查成功不等于公网已放行新端口。
+保留原有网站监听地址，数据库仅绑定 `127.0.0.1`。自定义多端口映射会拒绝自动修改，
+避免覆盖额外配置；两个已占用服务互换端口需要分步骤操作。
+
+管理进程需要持续运行。安装和升级脚本会启动它，但**不会自动安装操作系统开机服务**。
+主机重启后需要再次运行 `start`；无人值守场景可使用 systemd、launchd 或任务计划程序托管
+`python3 scripts/deployment_manager.py run`，工作目录设为项目目录。
+管理进程停止不影响网站运行，设置页会禁用端口变更。Windows 入口已提供，但仍需 Windows 实机验证。
+
+在部署机器恢复未完成的变更：
+
+```bash
+python3 scripts/deployment_manager.py stop
+python3 scripts/deployment_manager.py recover
+python3 scripts/deployment_manager.py start
+```
+
+`stop` 会等待正在执行的变更结束；`recover` 只恢复**尚未完成的事务**，不会撤销已经成功的变更。
+如果新地址无法从外部访问，可通过宿主机命令主动改回指定端口：
+
+```bash
+python3 scripts/deployment_manager.py stop
+python3 scripts/deployment_manager.py set-ports --app-port 8080
+# 如需本机数据库客户端访问，再加 --database-port 5432
+python3 scripts/deployment_manager.py start
+```
+
+`.deployment/` 中可能有 `.env` 的临时恢复快照，应保持私密，不提交或放入对外共享的备份。
+管理进程日志位于 `.deployment/controller.log`；`data/deployment/` 只存请求与状态，不存数据库密码。
+事务执行期间不要手动修改受管理的端口配置。自定义项目名需将 `COMPOSE_PROJECT_NAME` 写入 `.env`，
+不能只在一次命令中使用 `-p`。
 
 ## 本地开发
 

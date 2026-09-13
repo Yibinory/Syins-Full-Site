@@ -126,6 +126,12 @@ def main():
         write_env(env_path, values)
         compose = ['docker', 'compose']
         print(f'Configuration saved to {env_path}. Website port: {port}. Database publishing: {db_port or "disabled"}.')
+    (ROOT / 'data/deployment').mkdir(parents=True, exist_ok=True)
+    try:
+        from deployment_manager import stop
+        stop(ROOT)
+    except ImportError:
+        pass
     use_images = 'docker-compose.images.yml' in values.get('COMPOSE_FILE', '')
     if use_images:
         run(compose + ['pull'])
@@ -154,6 +160,11 @@ def main():
             with urlopen(f'http://127.0.0.1:{port}/api/v1/site/content/', timeout=3) as response:
                 if response.status == 200:
                     print(f'Ready: http://localhost:{port}/\nDashboard: http://localhost:{port}/dashboard')
+                    try:
+                        from deployment_manager import start
+                        start(ROOT)
+                    except (ImportError, OSError, RuntimeError):
+                        print('Start the deployment manager manually to enable dashboard port changes.')
                     print('Credentials: .env. Existing data is retained on reruns. Host hardware monitoring is optional; see README.')
                     return
         except Exception:

@@ -9,6 +9,7 @@ export function t(value: unknown): string {
   if (locale.value !== 'zh') return key
   if (zh[key]) return zh[key]
   const patterns: [RegExp, (match: RegExpMatchArray) => string][] = [
+    [/^Port (\d+) is already in use\.$/, m => `端口 ${m[1]} 已被占用。`],
     [/^Testing connection to (.+)…$/, m => `正在测试 ${m[1]} 的连接…`],
     [/^(\d+) host\(s\) could not be refreshed\. See the connection details below\.$/, m => `${m[1]} 台主机刷新失败，请查看下方连接详情。`],
     [/^polling every (\d+) s$/, m => `每 ${m[1]} 秒刷新`],

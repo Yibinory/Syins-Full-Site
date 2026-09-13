@@ -89,7 +89,7 @@ The installer currently accepts DNS hostnames and IPv4 addresses for this prompt
 
 The installer searches ports only for a **new installation**. An existing
 installation keeps its port to avoid unexpectedly changing its address.
-Dashboard port editing is not part of this release.
+Dashboard port editing is available through the optional host deployment manager described below.
 
 ### Source builds and prebuilt images
 
@@ -152,6 +152,76 @@ monitoring identifies backend/container runtime metrics rather than claiming
 they describe the physical host. Native Windows hardware sampling is not
 implemented; the application still runs through Linux containers, and remote
 Linux SSH monitoring remains available.
+
+## Deployment ports in Settings
+
+The deployment owner (Django superuser) can change the **website port** and
+**optional localhost-only PostgreSQL port** in Dashboard → Settings → Deployment
+ports. Backend/container internal ports remain fixed. Docker Compose **2.24.4+**
+is required for this feature.
+
+The installer starts a separate host process after the site is ready. Existing
+installations should update their Compose deployment to mount `data/deployment`,
+then run:
+
+```bash
+python3 scripts/deployment_manager.py start
+python3 scripts/deployment_manager.py status
+```
+
+On Windows replace `python3` with `py -3`. The host process requires access to
+this installation's Docker Compose project. It accepts only validated website
+and database port changes through a shared request directory; Django is **not**
+given the Docker socket or an arbitrary command execution endpoint.
+
+Applying changes briefly restarts the affected services. The controller checks
+port availability, updates `.env` and a private Compose override, applies the
+mapping, and checks the public API through the new port. Failures restore the
+previous files and ports. A private transaction journal also enables recovery
+when the controller is interrupted. Database volumes are never deleted.
+
+After changing the website port, the old browser tab can lose its connection.
+Use **Open new direct address** and check the result in Settings. For a reverse
+proxy, keep using the original domain and update the proxy's upstream separately.
+DNS, TLS, firewall rules, and router forwarding are not changed. A successful
+local health check does not prove that a new port is reachable from the Internet.
+Existing website bind addresses are preserved; database publishing binds only
+`127.0.0.1`. Multiple/custom port mappings are rejected rather than silently
+replaced. Port swaps between occupied services should be made in separate steps.
+
+The controller must remain running. Installer/update scripts start it, but no
+OS login/startup service is installed automatically. After reboot, run `start`
+again, or use your OS supervisor to run `python3 scripts/deployment_manager.py run`
+with the project directory as its working directory. If it stops, the website
+keeps running and Settings disables port changes. Use the foreground `run` mode
+with systemd/launchd/Task Scheduler when unattended host restarts are required.
+Windows wrappers are provided; Windows host execution still needs platform testing.
+
+Recovery on the deployment host:
+
+```bash
+python3 scripts/deployment_manager.py stop
+python3 scripts/deployment_manager.py recover
+python3 scripts/deployment_manager.py start
+```
+
+`stop` waits for any active change to finish. `recover` restores an **unfinished**
+transaction; it does not undo an already successful change. To explicitly return
+to another port even when the browser address is inaccessible:
+
+```bash
+python3 scripts/deployment_manager.py stop
+python3 scripts/deployment_manager.py set-ports --app-port 8080
+# Add --database-port 5432 if localhost database access is wanted.
+python3 scripts/deployment_manager.py start
+```
+
+Keep `.deployment/` private and out of version control/backups shared with others:
+it may contain a temporary snapshot of `.env`. Controller logs are in
+`.deployment/controller.log`. The public bridge in `data/deployment/` contains
+only requests/status, not database credentials. Do not hand-edit managed port
+values while a transaction is active. For custom project names persist
+`COMPOSE_PROJECT_NAME` in `.env`, rather than supplying it only through CLI `-p`.
 
 ## Local development
 

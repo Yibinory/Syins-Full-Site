@@ -20,3 +20,8 @@ data/host-metrics
 .env.*
 !.env.example
 docker-compose.override.yml
+
+.deployment/
+data/deployment/
+.env.ports
+.env.restore

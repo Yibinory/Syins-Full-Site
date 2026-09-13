@@ -21,3 +21,8 @@ data/host-metrics/
 
 docker-compose.override.yml
 .env.tmp
+
+.deployment/
+data/deployment/
+.env.ports
+.env.restore

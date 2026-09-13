@@ -9,6 +9,9 @@ if [ ! -f .env ]; then
   exit 1
 fi
 
+mkdir -p data/deployment
+python3 scripts/deployment_manager.py stop
+
 if grep -q 'docker-compose.images.yml' .env; then
   docker compose pull
 else
@@ -16,4 +19,5 @@ else
 fi
 docker compose up -d
 docker compose ps
+python3 scripts/deployment_manager.py start
 echo "Update complete. Database migrations ran in the backend startup process."
