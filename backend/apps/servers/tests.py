@@ -95,3 +95,13 @@ class ServerRegressionTests(TestCase):
         server.metric_samples.create(cpu_percent=10)
         self.assertEqual(self.client.delete(f'/api/v1/servers/{server.pk}/').status_code, 204)
         self.assertFalse(Server.objects.filter(pk=server.pk).exists())
+
+    def test_hardware_and_precise_capacity_survive_sampling(self):
+        server = Server.objects.create(name='Hardware', provider='ssh')
+        snapshot = normalized_snapshot({**RAW, 'cpu_model': 'Test CPU', 'cpu_cores': '8', 'cpu_threads': '16', 'memory_speed': '3200 MT/s'})
+        _save_snapshot(server, snapshot)
+        from .serializers import ServerSerializer
+        data = ServerSerializer(server).data
+        self.assertEqual(data['hardware']['cpu_model'], 'Test CPU')
+        self.assertEqual(data['hardware']['memory_speed'], '3200 MT/s')
+        self.assertEqual(data['disk']['totalBytes'], 100 * 1024**3)

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useSiteContentStore } from '@/stores/siteContent'
+const siteContent = useSiteContentStore()
 import { computed, nextTick, onMounted, ref } from 'vue'
 import { ArrowUpRight, LockKeyhole, Search } from 'lucide-vue-next'
 import PublicLayout from '@/layouts/PublicLayout.vue'
@@ -50,8 +52,8 @@ onMounted(load)
   <PublicLayout>
     <section class="public-paper-intro page-grid">
       <p class="section-kicker">{{ $t("04 / RECOMMENDED PAPERS") }}</p>
-      <h1>{{ $t("Papers worth") }}<br /><em>{{ $t("returning to.") }}</em></h1>
-      <p>{{ $t("A reading collection on medical imaging, generalization and generation. Recommendations, context and linked notes, newest first.") }}</p>
+      <h1>{{ siteContent.localized.papersHeading }}</h1>
+      <p>{{ siteContent.localized.papersDescription }}</p>
     </section>
 
     <section class="public-paper-browser page-grid">

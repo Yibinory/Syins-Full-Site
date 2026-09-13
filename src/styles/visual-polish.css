@@ -218,3 +218,40 @@ html[lang=zh-CN] .featured-note-copy h2 { line-height: 1.25; }
 @media(max-width: 1100px) { .public-nav .desktop-nav { display: none; }.public-nav .mobile-menu-button { display: grid; }.public-nav .language-switch { margin-left: auto; } }
 @media(max-width: 767px) { .dashboard-topbar .command-search { display: none; }.dashboard-topbar .language-switch { margin-left: auto; order: 2; } }
 .login-language { position: absolute; top: 24px; right: 24px; }
+
+/* Keep the menu and its trigger on the same breakpoint. */
+@media (max-width: 1100px) {
+  .public-nav { display: flex; height: 70px; }
+  .public-shell .mobile-nav { display: grid; position: absolute; z-index: 30; inset: 70px 0 auto; padding: 24px; gap: 20px; background: var(--paper); border-bottom: 1px solid var(--line); font: 1.5rem var(--serif); }
+}
+.public-nav .wordmark { min-width: 0; overflow-wrap: anywhere; }
+.public-nav .language-switch, .public-nav .mobile-menu-button { flex-shrink: 0; }
+.paper-list-row .ui-badge { display: inline-flex; justify-content: center; align-items: center; width: 108px; box-sizing: border-box; }
+.integration-row-badges { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.integration-row-actions { white-space: nowrap; flex-shrink: 0; }
+.integration-row-actions > * { flex-shrink: 0; }
+@media (max-width: 1000px) {
+  .integration-row { grid-template-columns: 34px minmax(0, 1fr) auto; }
+  .integration-row-actions { grid-column: 2 / -1; justify-self: end; }
+}
+@media (max-width: 560px) {
+  .integration-row { grid-template-columns: 34px minmax(0, 1fr); }
+  .integration-row-badges { grid-column: 2; }
+  .integration-row-actions { justify-self: start; }
+}
+.server-card footer > .server-card-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 10px 14px; }
+.server-card .server-card-actions > span, .server-card .server-card-actions > button { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; line-height: 1.5; }
+.server-card .server-card-actions svg { flex-shrink: 0; }
+.content-language-picker { padding: 20px 24px 0; font-size: .8rem; }
+.content-language-picker select { margin-left: 12px; padding: 7px 12px; border: 1px solid var(--dash-line); border-radius: 5px; background: white; }
+.content-language-picker p { color: #74808a; line-height: 1.6; }
+.server-hardware { display: grid; gap: 7px; margin: 16px 19px; font-size: .7rem; color: #74808a; }
+.server-hardware > div { display: flex; justify-content: space-between; gap: 16px; }
+.server-hardware dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
+.server-card { display: flex; flex-direction: column; }
+.server-card > footer { margin-top: auto; align-items: center; }
+.server-card > footer > .server-card-actions:last-child { display: flex; gap: 8px 12px; align-items: center; justify-content: flex-end; }
+.paper-list-row .ui-badge { flex: 0 0 108px; }
+@media (min-width: 768px) and (max-width: 1100px) {
+  .paper-list-head, .paper-list-row { grid-template-columns: 108px minmax(0, 1fr) 90px; }
+}

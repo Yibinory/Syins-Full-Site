@@ -8,12 +8,7 @@ import { useSiteContentStore } from '@/stores/siteContent'
 
 const siteContent = useSiteContentStore()
 
-const fallbackCurrentResearch = [
-  { number: '01', title: 'Medical Image Generation', text: 'Controllable generative models that preserve anatomy while exposing clinically meaningful variation.', status: 'Active', question: 'How can pathology change without silently changing patient identity?', method: 'Anatomy-conditioned diffusion · Counterfactual editing', updated: 'Updated 2 days ago' },
-  { number: '02', title: 'Longitudinal Image Modeling', text: 'Learning patient-specific trajectories to model disease progression across sparse clinical timepoints.', status: 'Exploring', question: 'What does a plausible future image look like when observations are sparse and irregular?', method: 'Temporal latent models · Calibrated uncertainty', updated: 'Updated today' },
-  { number: '03', title: 'Domain Generalization', text: 'Robust representations that transfer across scanners, institutions, and unseen acquisition protocols.', status: 'Active', question: 'Which visual features survive a change of hospital, scanner, and population?', method: 'Invariant representation learning · OOD evaluation', updated: 'Updated 5 days ago' },
-]
-const currentResearch = computed(() => siteContent.content.currentResearch?.length ? siteContent.content.currentResearch : fallbackCurrentResearch)
+const currentResearch = computed(() => siteContent.localized.currentResearch ?? [])
 
 const workspace = useWorkspaceStore()
 const publications = computed(() => workspace.publications.filter(p => p.featured).sort((a, b) => b.year - a.year))
@@ -40,13 +35,13 @@ function toggleLens() {
   <PublicLayout>
     <section class="hero page-grid">
       <div class="hero-copy">
-        <p class="eyebrow"><span>{{ $t("01 — Identity") }}</span><span>{{ siteContent.content.title }} · {{ siteContent.content.location }}</span></p>
-        <h1><span v-for="(part, index) in siteContent.content.name.split(' ')" :key="index">{{ part }}</span></h1>
-        <p class="hero-headline">{{ siteContent.content.headline }}</p>
-        <p class="hero-bio">{{ siteContent.content.bio }}</p>
+        <p class="eyebrow"><span>{{ $t("01 — Identity") }}</span><span>{{ siteContent.localized.title }} · {{ siteContent.localized.location }}</span></p>
+        <h1><span v-for="(part, index) in siteContent.localized.name.split(' ')" :key="index">{{ part }}</span></h1>
+        <p class="hero-headline">{{ siteContent.localized.headline }}</p>
+        <p class="hero-bio">{{ siteContent.localized.bio }}</p>
         <div class="hero-links">
-          <a v-for="link in [{ label: 'Google Scholar', href: siteContent.content.scholarUrl }, { label: 'GitHub', href: siteContent.content.githubUrl }, { label: 'Curriculum Vitae', href: siteContent.content.cvUrl }]" :key="link.label" :href="link.href">{{ link.label }} <ArrowUpRight :size="15" /></a>
-          <a :href="`mailto:${siteContent.content.email}`">{{ $t("Email") }} <ArrowUpRight :size="15" /></a>
+          <a v-for="link in [{ label: 'Google Scholar', href: siteContent.localized.scholarUrl }, { label: 'GitHub', href: siteContent.localized.githubUrl }, { label: 'Curriculum Vitae', href: siteContent.localized.cvUrl }]" :key="link.label" :href="link.href">{{ link.label }} <ArrowUpRight :size="15" /></a>
+          <a :href="`mailto:${siteContent.localized.email}`">{{ $t("Email") }} <ArrowUpRight :size="15" /></a>
         </div>
       </div>
       <figure ref="portrait" class="portrait-wrap portrait-interactive" @pointermove="moveLens" @pointerenter="lens.visible = true" @pointerleave="lens.visible = lens.pinned" @click="toggleLens">
@@ -61,7 +56,7 @@ function toggleLens() {
     </section>
 
     <div class="research-vocabulary" :aria-label="$t('Research directions')">
-      <template v-for="(direction, index) in siteContent.content.researchDirections.split('×')" :key="index">
+      <template v-for="(direction, index) in siteContent.localized.researchDirections.split('×')" :key="index">
         <i v-if="index" aria-hidden="true">×</i><span>{{ direction.trim() }}</span>
       </template>
     </div>
@@ -69,7 +64,7 @@ function toggleLens() {
     <section id="research" class="current page-grid">
       <div class="section-heading">
         <p class="section-kicker">{{ $t("02 — Current research") }}</p>
-        <h2>{{ siteContent.content.currentResearchHeading }}</h2>
+        <h2>{{ siteContent.localized.currentResearchHeading }}</h2>
       </div>
       <div class="research-list">
         <button v-for="(item, index) in currentResearch" :key="item.number" class="research-row" :class="{ active: activeResearch === index }" :aria-pressed="activeResearch === index" @mouseenter="activeResearch = index" @focus="activeResearch = index" @click="activeResearch = index">
@@ -78,7 +73,7 @@ function toggleLens() {
           <p>{{ item.text }}</p>
           <span class="research-status"><i />{{ item.status }} <Plus :size="13" /></span>
         </button>
-        <div class="research-detail" aria-live="polite">
+        <div v-if="currentResearch[activeResearch]" class="research-detail" aria-live="polite">
           <span class="detail-number">{{ currentResearch[activeResearch].number }}</span>
           <div><p>{{ $t("Research question") }}</p><h3>{{ currentResearch[activeResearch].question }}</h3></div>
           <div><p>{{ $t("Current approach") }}</p><strong>{{ currentResearch[activeResearch].method }}</strong><small>{{ currentResearch[activeResearch].updated }}</small></div>
@@ -89,10 +84,10 @@ function toggleLens() {
     <section id="selected-research" class="selected-work page-grid">
       <div class="section-heading work-heading">
         <p class="section-kicker">{{ $t("03 — Selected research") }}</p>
-        <h2>{{ siteContent.content.featuredResearchHeading }}</h2>
-        <p class="work-aside">{{ siteContent.content.featuredResearchIntro }}</p>
+        <h2>{{ siteContent.localized.featuredResearchHeading }}</h2>
+        <p class="work-aside">{{ siteContent.localized.featuredResearchIntro }}</p>
       </div>
-      <article v-for="(project, index) in siteContent.content.selectedProjects" :key="project.id" class="feature-project" :class="{ 'feature-project--reverse': index % 2 === 1 }">
+      <article v-for="(project, index) in siteContent.localized.selectedProjects" :key="project.id" class="feature-project" :class="{ 'feature-project--reverse': index % 2 === 1 }">
         <ResearchMedia :project="project" />
         <div class="project-copy">
           <span class="project-index">{{ $t("Project") }} {{ String(index + 1).padStart(2, '0') }} · {{ project.status }}</span>

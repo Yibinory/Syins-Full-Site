@@ -1,4 +1,12 @@
 export default {
+  'Content language': '内容语言',
+  'Empty fields fall back to the other language, then “-”. Links and email are shared.': '未填写时显示另一种语言；两种都为空则显示“-”。链接和邮箱共用。',
+  'CPU model': 'CPU 型号',
+  'CPU cores': '物理核心',
+  'CPU threads': '逻辑线程',
+  'Architecture': '架构',
+  'Memory speed': '内存频率',
+
   "# Start writing…": "# 开始写作…",
   "01 — Identity": "01 — 个人信息",
   "02 — Current research": "02 — 当前研究",

@@ -15,6 +15,36 @@ def command(*args):
     return subprocess.check_output(args, text=True, stderr=subprocess.DEVNULL, timeout=15, env={**os.environ, 'LC_ALL': 'C'})
 
 
+def hardware_info():
+    result = {'architecture': platform.machine(), 'cpu_threads': os.cpu_count() or ''}
+    try:
+        if platform.system() == 'Linux':
+            cpu = Path('/proc/cpuinfo').read_text()
+            match = re.search(r'^(?:model name|Hardware)\s*:\s*(.+)', cpu, re.M)
+            result['cpu_model'] = match.group(1).strip() if match else ''
+            pairs = re.findall(r'physical id\s*:\s*(\d+).*?core id\s*:\s*(\d+)', cpu, re.S)
+            result['cpu_cores'] = len(set(pairs)) if pairs else ''
+            try:
+                dmi = command('dmidecode', '--type', '17')
+                speeds = re.findall(r'^\s*Configured (?:Memory |Clock )?Speed:\s*(\d+\s*\S+)', dmi, re.M)
+                result['memory_speed'] = ', '.join(sorted(set(speeds)))
+            except (OSError, subprocess.SubprocessError):
+                pass
+        elif platform.system() == 'Darwin':
+            result['cpu_model'] = command('/usr/sbin/sysctl', '-n', 'machdep.cpu.brand_string').strip()
+            result['cpu_cores'] = command('/usr/sbin/sysctl', '-n', 'hw.physicalcpu').strip()
+            result['machine_model'] = command('/usr/sbin/sysctl', '-n', 'hw.model').strip()
+            try:
+                memory = command('/usr/sbin/system_profiler', 'SPMemoryDataType')
+                speeds = re.findall(r'Speed:\s*([^\n]+)', memory)
+                result['memory_speed'] = ', '.join(sorted(set(speeds)))
+            except (OSError, subprocess.SubprocessError):
+                pass
+    except (OSError, subprocess.SubprocessError):
+        pass
+    return result
+
+
 def collect():
     system = platform.system()
     if system == 'Linux':
@@ -48,6 +78,7 @@ def collect():
         raise RuntimeError('Host metrics currently support Linux and macOS')
     disk = shutil.disk_usage('/')
     result = {
+        **hardware_info(),
         'hostname': socket.gethostname(), 'os': os_name, 'uptime_seconds': int(uptime),
         'cpu_percent': round(max(0, min(100, usage)), 2), 'load_average': os.getloadavg()[0],
         'memory_total_kb': total // 1024, 'memory_used_kb': max(0, total-available) // 1024,

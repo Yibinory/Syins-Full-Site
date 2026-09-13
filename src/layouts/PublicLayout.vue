@@ -19,7 +19,7 @@ const toggleTheme = () => { mode.value = mode.value === 'dark' ? 'light' : 'dark
   <div class="public-shell">
     <div class="scroll-progress" :style="{ transform: `scaleX(${scrollProgress})` }" />
     <header class="public-nav">
-      <RouterLink to="/" class="wordmark">{{ siteContent.content.name }}</RouterLink>
+      <RouterLink to="/" class="wordmark">{{ siteContent.localized.name }}</RouterLink>
       <nav class="desktop-nav" :aria-label="$t('Main navigation')">
         <RouterLink :to="{ path: '/', hash: '#research' }"><small>01</small> {{ $t("Research") }}</RouterLink>
         <RouterLink to="/publications"><small>02</small> {{ $t("Publications") }}</RouterLink>
@@ -27,20 +27,20 @@ const toggleTheme = () => { mode.value = mode.value === 'dark' ? 'light' : 'dark
         <RouterLink to="/papers"><small>04</small> {{ $t("Recommended") }}</RouterLink>
         <RouterLink to="/tools"><small>05</small> {{ $t("Tools") }}</RouterLink>
         <span class="nav-divider" />
-        <a :href="siteContent.content.scholarUrl">{{ $t("Scholar ↗") }}</a>
-        <a :href="siteContent.content.githubUrl">{{ $t("GitHub ↗") }}</a>
+        <a :href="siteContent.localized.scholarUrl">{{ $t("Scholar ↗") }}</a>
+        <a :href="siteContent.localized.githubUrl">{{ $t("GitHub ↗") }}</a>
         <button class="theme-button" type="button" :aria-label="$t('Toggle color theme')" @click="toggleTheme">
           <Sun v-if="mode === 'dark'" :size="16" />
           <Moon v-else :size="16" />
         </button>
       </nav>
       <LanguageSwitch />
-      <button class="mobile-menu-button" type="button" :aria-label="$t('Open navigation')" @click="menuOpen = !menuOpen">
+      <button class="mobile-menu-button" type="button" :aria-label="$t('Open navigation')" :aria-expanded="menuOpen" aria-controls="public-mobile-nav" @click="menuOpen = !menuOpen">
         <X v-if="menuOpen" :size="21" />
         <Menu v-else :size="21" />
       </button>
     </header>
-    <div v-if="menuOpen" class="mobile-nav">
+    <div v-if="menuOpen" id="public-mobile-nav" class="mobile-nav">
       <RouterLink :to="{ path: '/', hash: '#research' }" @click="menuOpen = false">{{ $t("Research") }}</RouterLink>
       <RouterLink to="/publications" @click="menuOpen = false">{{ $t("Publications") }}</RouterLink>
       <RouterLink to="/notes" @click="menuOpen = false">{{ $t("Notes") }}</RouterLink>
@@ -51,8 +51,8 @@ const toggleTheme = () => { mode.value = mode.value === 'dark' ? 'light' : 'dark
     <main><slot /></main>
     <footer class="public-footer">
       <div>
-        <p class="footer-name">{{ siteContent.content.name }}</p>
-        <p>{{ $t("Medical image analysis · Generative modeling") }}</p>
+        <p class="footer-name">{{ siteContent.localized.name }}</p>
+        <p>{{ siteContent.localized.researchDirections }}</p>
       </div>
       <div class="footer-right">
         <RouterLink to="/dashboard">{{ $t("Research OS") }}</RouterLink>

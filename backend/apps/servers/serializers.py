@@ -5,6 +5,7 @@ from .models import Server, ServerMetricSample
 
 
 class ServerSerializer(serializers.ModelSerializer):
+    hardware = serializers.SerializerMethodField()
     metricScope = serializers.SerializerMethodField()
     detectedHostname = serializers.SerializerMethodField()
     containersAvailable = serializers.SerializerMethodField()
@@ -20,7 +21,7 @@ class ServerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Server
         fields = [
-            "id", "metricScope", "detectedHostname", "containersAvailable", "name", "hostname", "ip", "port", "username", "password", "description", "location", "os", "status", "provider",
+            "id", "hardware", "metricScope", "detectedHostname", "containersAvailable", "name", "hostname", "ip", "port", "username", "password", "description", "location", "os", "status", "provider",
             "isPrimary", "lastSeen", "uptime", "capabilities", "cpu", "memory", "disk", "gpus", "containers",
             "connectorStatus", "hostKeyFingerprint", "lastError", "enabled", "createdAt", "updatedAt",
         ]
@@ -30,6 +31,10 @@ class ServerSerializer(serializers.ModelSerializer):
         if not hasattr(obj, "_latest_metric"):
             obj._latest_metric = obj.metric_samples.first()
         return obj._latest_metric
+
+    def get_hardware(self, obj):
+        sample = self._latest_sample(obj)
+        return sample.payload.get("hardware", {}) if sample else {}
 
     def get_metricScope(self, obj):
         if obj.provider == "mock":

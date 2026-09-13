@@ -6,6 +6,7 @@ from apps.core.models import MediaAsset
 
 
 class SiteProfile(models.Model):
+    translations = models.JSONField(default=dict, blank=True)
     id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
     name = models.CharField(max_length=120, default="Syins Yibinory")
     title = models.CharField(max_length=180, default="Medical imaging researcher")
@@ -21,6 +22,10 @@ class SiteProfile(models.Model):
     publications_description = models.TextField(blank=True)
     notes_heading = models.CharField(max_length=240, blank=True)
     notes_description = models.TextField(blank=True)
+    papers_heading = models.TextField(blank=True, default="Papers worth returning to.")
+    papers_description = models.TextField(blank=True, default="A reading collection on medical imaging, generalization and generation. Recommendations, context and linked notes, newest first.")
+    tools_heading = models.TextField(blank=True, default="Tools & resources.")
+    tools_description = models.TextField(blank=True, default="A collection of useful external pages and research tools.")
     scholar_url = models.URLField(blank=True)
     github_url = models.URLField(blank=True)
     cv_url = models.URLField(blank=True)
@@ -33,6 +38,7 @@ class SiteProfile(models.Model):
 
 
 class ResearchProject(models.Model):
+    translations = models.JSONField(default=dict, blank=True)
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     order = models.PositiveIntegerField(default=0)
     title = models.CharField(max_length=240)
@@ -52,6 +58,7 @@ class ResearchProject(models.Model):
 
 
 class CurrentResearchItem(models.Model):
+    translations = models.JSONField(default=dict, blank=True)
     id = models.BigAutoField(primary_key=True)
     order = models.PositiveIntegerField(default=0)
     number = models.CharField(max_length=12)

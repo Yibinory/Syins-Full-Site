@@ -58,6 +58,13 @@ os_name=$(grep '^PRETTY_NAME=' /etc/os-release 2>/dev/null | cut -d= -f2- | tr -
 test -n "$os_name" || os_name=Linux
 printf 'os=%s\n' "$os_name"
 printf 'uptime_seconds=%s\n' "$(awk '{printf "%d", $1}' /proc/uptime 2>/dev/null || printf '0')"
+printf 'cpu_model=%s\n' "$(awk -F ': ' '/^(model name|Hardware)[[:space:]]*:/ {print $2; exit}' /proc/cpuinfo 2>/dev/null)"
+printf 'cpu_threads=%s\n' "$(getconf _NPROCESSORS_ONLN 2>/dev/null)"
+printf 'cpu_cores=%s\n' "$(lscpu -p=SOCKET,CORE 2>/dev/null | awk -F, '!/^#/ && NF==2 {seen[$1 FS $2]=1} END {for (k in seen) n++; if(n) print n}')"
+printf 'architecture=%s\n' "$(uname -m)"
+if command -v timeout >/dev/null 2>&1 && command -v dmidecode >/dev/null 2>&1; then
+  printf 'memory_speed=%s\n' "$(timeout 3 dmidecode --type 17 2>/dev/null | awk -F ': ' '/Configured (Memory |Clock )?Speed:/ && $2 ~ /^[0-9]/ {seen[$2]=1} END {for (s in seen) printf "%s ", s}')"
+fi
 printf 'cpu_percent=%s\n' "$cpu"
 printf 'load_average=%s\n' "$(awk '{print $1}' /proc/loadavg 2>/dev/null || printf '0')"
 printf 'memory_total_kb=%s\n' "$mem_total"
@@ -252,13 +259,14 @@ def normalized_snapshot(raw_values):
             "temperature": gpu["temperature"],
         })
     return {
+        "hardware": {key: raw_values.get(key, "") for key in ("cpu_model", "cpu_threads", "cpu_cores", "architecture", "machine_model", "memory_speed")},
         "hostname": raw_values.get("hostname", ""),
         "os": raw_values.get("os", "Linux"),
         "uptime": _uptime_label(_integer(raw_values.get("uptime_seconds"))),
         "cpu": round(min(100, max(0, _number(raw_values.get("cpu_percent")))), 1),
         "load_average": _number(raw_values.get("load_average"), None),
-        "memory": {"used": round(memory_used / (1024 ** 3), 2), "total": round(memory_total / (1024 ** 3), 2)},
-        "disk": {"used": round(disk_used / (1024 ** 4), 2), "total": round(disk_total / (1024 ** 4), 2)},
+        "memory": {"usedBytes": memory_used, "totalBytes": memory_total, "used": round(memory_used / (1024 ** 3), 2), "total": round(memory_total / (1024 ** 3), 2)},
+        "disk": {"usedBytes": disk_used, "totalBytes": disk_total, "used": round(disk_used / (1024 ** 4), 2), "total": round(disk_total / (1024 ** 4), 2)},
         "memory_used_bytes": memory_used,
         "memory_total_bytes": memory_total,
         "disk_used_bytes": disk_used,
@@ -297,7 +305,7 @@ def _save_snapshot(server, snapshot):
         gpu_count=len(snapshot["gpus"]),
         containers=snapshot["containers"],
         load_average=snapshot.get("load_average"),
-        payload={"gpus": snapshot["gpus"], "provider": server.provider, "hostname": snapshot.get("hostname", ""), "scope": snapshot.get("scope", "ssh_host"), "containersAvailable": snapshot.get("containers_available", True)},
+        payload={"hardware": snapshot.get("hardware", {}), "gpus": snapshot["gpus"], "provider": server.provider, "hostname": snapshot.get("hostname", ""), "scope": snapshot.get("scope", "ssh_host"), "containersAvailable": snapshot.get("containers_available", True)},
     )
     return server
 

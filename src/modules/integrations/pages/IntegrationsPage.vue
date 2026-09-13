@@ -74,8 +74,8 @@ onMounted(() => store.hydrate())
       <article v-for="page in store.pages" :key="page.id" class="integration-row">
         <div class="integration-icon"><PanelsTopLeft :size="17" /></div>
         <div><h2>{{ page.title }}</h2><p>{{ page.description || page.url }}</p><small>{{ page.url }}</small></div>
-        <AppBadge :tone="page.enabled ? 'success' : 'neutral'">{{ page.enabled ? $t('Enabled') : $t('Hidden') }}</AppBadge>
-        <AppBadge v-if="page.publiclyVisible" tone="info">{{ $t("Public") }}</AppBadge>
+        <div class="integration-row-badges"><AppBadge :tone="page.enabled ? 'success' : 'neutral'">{{ page.enabled ? $t('Enabled') : $t('Hidden') }}</AppBadge>
+        <AppBadge v-if="page.publiclyVisible" tone="info">{{ $t("Public") }}</AppBadge></div>
         <div class="integration-row-actions"><RouterLink :to="'/dashboard/integrations/' + page.slug">{{ $t("Open") }} <ExternalLink :size="13" /></RouterLink><button type="button" @click="edit(page)">{{ $t("Edit") }}</button><button type="button" class="danger" @click="remove(page)"><Trash2 :size="14" /></button></div>
       </article>
       <div v-if="!store.pages.length" class="module-placeholder"><div><PanelsTopLeft :size="28" /><h2>{{ $t("No dashboard pages yet") }}</h2><p>{{ $t("Add a URL to keep an external research service next to your papers, notes and servers.") }}</p><AppButton @click="newPage">{{ $t("Add the first page") }}</AppButton></div></div>

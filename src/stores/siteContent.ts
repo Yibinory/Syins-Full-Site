@@ -1,5 +1,7 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
+import { locale } from '@/i18n'
+import { resolveContent } from '@/services/localizedContent'
 import { profile } from '@/modules/profile/data'
 import { http } from '@/services/http'
 import { localStorageJson, saveLocalStorageJson } from '@/services/api'
@@ -19,6 +21,11 @@ export interface ResearchProject {
 }
 
 export interface SiteContent {
+  translations?: Record<string, Record<string, string>>
+  papersHeading: string
+  papersDescription: string
+  toolsHeading: string
+  toolsDescription: string
   name: string
   title: string
   location: string
@@ -50,6 +57,10 @@ export interface SiteContent {
 }
 
 const defaults: SiteContent = {
+  papersHeading: 'Papers worth returning to.',
+  papersDescription: 'A reading collection on medical imaging, generalization and generation. Recommendations, context and linked notes, newest first.',
+  toolsHeading: 'Tools & resources.',
+  toolsDescription: 'A collection of useful external pages and research tools.',
   name: profile.name,
   title: 'Medical imaging researcher',
   location: profile.location,
@@ -127,5 +138,7 @@ export const useSiteContentStore = defineStore('site-content', () => {
     await save()
   }
 
-  return { apiLoaded, content, lastSavedAt, hydrated, saving, hydrate, save, reset }
+  const localized = computed(() => resolveContent(content.value, locale.value))
+
+  return { localized, apiLoaded, content, lastSavedAt, hydrated, saving, hydrate, save, reset }
 })

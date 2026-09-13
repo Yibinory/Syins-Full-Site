@@ -16,7 +16,7 @@ const servers = computed(() => workspace.apiLoaded ? workspace.servers.filter(s 
 const stats = ref<{research:{total:number;active:number};papers:{total:number;toRead:number};documents:{total:number;private:number};servers:{total:number;online:number;gpus:number}} | null>(null)
 onMounted(async () => { try { stats.value = (await http.get<typeof stats.value>('/overview/')).data } catch { /* Render unavailable counts, never demo numbers. */ } })
 const documents = computed(() => (workspace.apiLoaded ? workspace.documents : []).filter(d => !d.trashedAt).sort((a,b) => b.updatedAt.localeCompare(a.updatedAt)))
-const currentResearch = computed(() => siteContent.apiLoaded ? siteContent.content.currentResearch : [])
+const currentResearch = computed(() => siteContent.apiLoaded ? siteContent.localized.currentResearch : [])
 const activeResearchCount = computed(() => currentResearch.value.filter(item => item.status.toLowerCase().includes('active')).length)
 const onlineServerCount = computed(() => servers.value.filter(server => server.status !== 'offline').length)
 const gpuCount = computed(() => servers.value.reduce((count, server) => count + server.gpus.length, 0))

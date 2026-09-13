@@ -26,9 +26,9 @@ const visibleNotes = computed(() => activeFilter.value === 'All'
   <PublicLayout>
     <header class="notes-intro page-grid">
       <p class="section-kicker">{{ $t("Notes / 2026") }}</p>
-      <h1>{{ siteContent.content.notesHeading }}</h1>
+      <h1>{{ siteContent.localized.notesHeading }}</h1>
       <div class="notes-intro-copy">
-        <p>{{ siteContent.content.notesDescription }}</p>
+        <p>{{ siteContent.localized.notesDescription }}</p>
         <a href="#note-index">{{ $t("Explore the index") }} <ArrowDownRight :size="16" /></a>
       </div>
       <p class="notes-count"><strong>{{ publicNotes.length }}</strong><span>{{ $t("published entries") }}</span></p>

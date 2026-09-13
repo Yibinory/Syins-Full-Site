@@ -27,7 +27,7 @@ const grouped = computed(() => {
 <template>
   <PublicLayout>
     <header class="public-page-intro publications-intro page-grid">
-      <p class="section-kicker">{{ $t("Publications") }}</p><h1>{{ siteContent.content.publicationsHeading }}</h1><p>{{ siteContent.content.publicationsDescription }}</p>
+      <p class="section-kicker">{{ $t("Publications") }}</p><h1>{{ siteContent.localized.publicationsHeading }}</h1><p>{{ siteContent.localized.publicationsDescription }}</p>
     </header>
     <section class="publication-browser page-grid">
       <div class="publication-filters" :aria-label="$t('Filter publications')"><button v-for="filter in filters" :key="filter" :class="{ active: active === filter }" @click="active = filter">{{ $t(filter) }}</button></div>

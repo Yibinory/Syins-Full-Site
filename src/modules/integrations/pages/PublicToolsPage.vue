@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useSiteContentStore } from '@/stores/siteContent'
+const siteContent = useSiteContentStore()
 import { ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ArrowUpRight, ArrowLeft } from 'lucide-vue-next'
@@ -32,8 +34,8 @@ watch(() => route.params.slug, async (slug, _, cleanup) => {
   <PublicLayout>
     <header class="public-tools-intro page-grid">
       <p class="section-kicker">{{ $t("05 / Tools") }}</p>
-      <h1>{{ selected ? selected.title : $t('Tools & resources.') }}</h1>
-      <p>{{ selected ? selected.description : $t('A collection of useful external pages and research tools.') }}</p>
+      <h1>{{ selected ? selected.title : siteContent.localized.toolsHeading }}</h1>
+      <p>{{ selected ? selected.description : siteContent.localized.toolsDescription }}</p>
     </header>
     <section class="public-tools-content page-grid">
       <p v-if="loading">{{ $t("Loading…") }}</p>

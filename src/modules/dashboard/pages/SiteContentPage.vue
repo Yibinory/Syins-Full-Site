@@ -6,7 +6,9 @@ import DashboardPageHeader from '@/components/shared/DashboardPageHeader.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import { useSiteContentStore, type SiteContent } from '@/stores/siteContent'
 
-type ContentKey = Exclude<keyof SiteContent, 'selectedProjects' | 'currentResearch'>
+import { editContent } from '@/services/localizedContent'
+
+type ContentKey = Exclude<keyof SiteContent, 'selectedProjects' | 'currentResearch' | 'translations'>
 interface ContentField { key: ContentKey; label: string; multiline?: boolean; help?: string }
 interface ContentSection { id: string; label: string; description: string; icon: typeof Home; fields: ContentField[] }
 
@@ -26,12 +28,16 @@ const sections: ContentSection[] = [
   { id: 'notes', label: 'Notes', description: 'Library introduction; featured entries are managed in Documents', icon: FileText, fields: [
     { key: 'notesHeading', label: 'Library heading' }, { key: 'notesDescription', label: 'Library introduction', multiline: true }, 
   ] },
+  { id: 'papers', label: 'Recommended papers', description: 'Page introduction', icon: Newspaper, fields: [{ key: 'papersHeading', label: 'Page heading' }, { key: 'papersDescription', label: 'Page introduction', multiline: true }] },
+  { id: 'tools', label: 'Tools', description: 'Page introduction', icon: Link2, fields: [{ key: 'toolsHeading', label: 'Page heading' }, { key: 'toolsDescription', label: 'Page introduction', multiline: true }] },
   { id: 'links', label: 'External links', description: 'Scholar, GitHub and curriculum vitae', icon: Link2, fields: [
     { key: 'scholarUrl', label: 'Google Scholar URL' }, { key: 'githubUrl', label: 'GitHub URL' }, { key: 'cvUrl', label: 'CV URL' },
   ] },
 ]
 
 const store = useSiteContentStore()
+const editingLanguage = ref<'en' | 'zh'>('en')
+const editable = computed(() => editContent(store.content, editingLanguage.value))
 const activeId = ref('homepage')
 const justSaved = ref(false)
 const activeSection = computed(() => sections.find((section) => section.id === activeId.value) ?? sections[0]!)
@@ -101,17 +107,18 @@ async function saveChanges() {
         </header>
         <p v-if="activeId === 'publications'" class="manager-shortcut">{{ $t("Manage individual papers in") }} <RouterLink to="/dashboard/publications">{{ $t("Publications ↗") }}</RouterLink>.</p>
         <p v-if="activeId === 'notes'" class="manager-shortcut">{{ $t("Write notes and select homepage features in") }} <RouterLink to="/dashboard/docs">{{ $t("Documents ↗") }}</RouterLink>.</p>
+        <div class="content-language-picker"><label>{{ $t('Content language') }} <select v-model="editingLanguage"><option value="en">English</option><option value="zh">中文</option></select></label><p>{{ $t('Empty fields fall back to the other language, then “-”. Links and email are shared.') }}</p></div>
         <form @submit.prevent="saveChanges">
           <label v-for="field in activeSection.fields" :key="field.key">
             <span>{{ $t(field.label) }}</span>
-            <textarea v-if="field.multiline" v-model="store.content[field.key]" rows="3" />
-            <input v-else v-model="store.content[field.key]" />
+            <textarea v-if="field.multiline" v-model="editable[field.key]" rows="3" />
+            <input v-else v-model="editable[field.key]" />
             <small v-if="field.help">{{ $t(field.help) }}</small>
           </label>
           <fieldset v-if="activeId === 'research'" class="project-editor-list">
             <legend>{{ $t("Selected research projects") }}</legend>
             <p>{{ $t("Upload figures, videos or interactive HTML / Vue packages. Replacing the visual keeps your project text and links.") }}</p>
-            <fieldset v-for="(project, index) in store.content.selectedProjects" :key="project.id" class="project-editor">
+            <fieldset v-for="(project, index) in editable.selectedProjects" :key="project.id" class="project-editor">
               <legend>{{ $t("Project") }} {{ index + 1 }}</legend>
               <label><span>{{ $t("Title") }}</span><input v-model="project.title" /></label>
               <label><span>{{ $t("Status") }}</span><input v-model="project.status" /></label>
@@ -122,14 +129,14 @@ async function saveChanges() {
                 <label><span>{{ $t("Link") }} {{ linkIndex + 1 }} {{ $t("label") }}</span><input v-model="link.label" /></label>
                 <label><span>{{ $t("Link") }} {{ linkIndex + 1 }} {{ $t("URL") }}</span><input v-model="link.url" :placeholder="$t('https://…')" /></label>
               </template>
-              <div class="project-editor-actions"><AppButton :disabled="index === 0" @click="moveProject(index, -1)">{{ $t("Move up") }}</AppButton><AppButton :disabled="index === store.content.selectedProjects.length - 1" @click="moveProject(index, 1)">{{ $t("Move down") }}</AppButton><AppButton @click="store.content.selectedProjects.splice(index, 1)">{{ $t("Remove project") }}</AppButton></div>
+              <div class="project-editor-actions"><AppButton :disabled="index === 0" @click="moveProject(index, -1)">{{ $t("Move up") }}</AppButton><AppButton :disabled="index === editable.selectedProjects.length - 1" @click="moveProject(index, 1)">{{ $t("Move down") }}</AppButton><AppButton @click="editable.selectedProjects.splice(index, 1)">{{ $t("Remove project") }}</AppButton></div>
             </fieldset>
             <AppButton @click="addProject">{{ $t("Add project") }}</AppButton>
           </fieldset>
           <fieldset v-if="activeId === 'research'" class="project-editor-list">
             <legend>{{ $t("Current research questions") }}</legend>
             <p>{{ $t("These entries power the interactive research section on the homepage. Keep the question and current approach concise.") }}</p>
-            <fieldset v-for="(item, index) in store.content.currentResearch" :key="item.id" class="project-editor">
+            <fieldset v-for="(item, index) in editable.currentResearch" :key="item.id" class="project-editor">
               <legend>{{ $t("Question") }} {{ item.number }}</legend>
               <label><span>{{ $t("Title") }}</span><input v-model="item.title" /></label>
               <label><span>{{ $t("Status") }}</span><input v-model="item.status" /></label>
@@ -137,7 +144,7 @@ async function saveChanges() {
               <label><span>{{ $t("Research question") }}</span><textarea v-model="item.question" rows="2" /></label>
               <label><span>{{ $t("Current approach") }}</span><textarea v-model="item.method" rows="2" /></label>
               <label><span>{{ $t("Updated label") }}</span><input v-model="item.updated" :placeholder="$t('Updated today')" /></label>
-              <div class="project-editor-actions"><AppButton :disabled="index === 0" @click="moveCurrentResearch(index, -1)">{{ $t("Move up") }}</AppButton><AppButton :disabled="index === store.content.currentResearch.length - 1" @click="moveCurrentResearch(index, 1)">{{ $t("Move down") }}</AppButton><AppButton @click="removeCurrentResearch(index)">{{ $t("Remove question") }}</AppButton></div>
+              <div class="project-editor-actions"><AppButton :disabled="index === 0" @click="moveCurrentResearch(index, -1)">{{ $t("Move up") }}</AppButton><AppButton :disabled="index === editable.currentResearch.length - 1" @click="moveCurrentResearch(index, 1)">{{ $t("Move down") }}</AppButton><AppButton @click="removeCurrentResearch(index)">{{ $t("Remove question") }}</AppButton></div>
             </fieldset>
             <AppButton @click="addCurrentResearch">{{ $t("Add question") }}</AppButton>
           </fieldset>
