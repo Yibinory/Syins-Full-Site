@@ -91,6 +91,20 @@ class ResearchOsApiTests(TestCase):
         self.assertEqual(media.json()["kind"], "image")
         self.assertEqual(self.client.get("/api/v1/media/{}/".format(media.json()["id"])).status_code, 200)
 
+    def test_shared_portrait_persists_and_protects_media(self):
+        self.login()
+        upload = SimpleUploadedFile("portrait.svg", b"<svg xmlns='http://www.w3.org/2000/svg'></svg>", content_type="image/svg+xml")
+        media = self.client.post("/api/v1/media/", {"upload": upload}, format="multipart").json()
+        response = self.client.patch("/api/v1/site/content/", {"portraitAssetId": media["id"], "translations": {"zh": {"name": "研究者"}}}, format="json")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["portraitAssetId"], media["id"])
+        self.client.logout()
+        self.assertTrue(self.client.get("/api/v1/site/content/").json()["portraitUrl"].endswith("portrait.svg"))
+        self.login()
+        self.assertEqual(self.client.delete(f"/api/v1/media/{media['id']}/").status_code, 409)
+        self.assertEqual(self.client.patch("/api/v1/site/content/", {"portraitAssetId": None}, format="json").json()["portraitUrl"], "")
+        self.assertEqual(self.client.delete(f"/api/v1/media/{media['id']}/").status_code, 204)
+
     def test_server_refresh_is_explicit_and_safe(self):
         self.login()
         server = Server.objects.create(name="Mock server", provider="mock", status="online")

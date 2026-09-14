@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { ArrowUpRight, Check, FileText, FlaskConical, Home, Link2, Newspaper, RotateCcw, Save, UserRound } from 'lucide-vue-next'
+import PortraitEditor from '@/components/shared/PortraitEditor.vue'
 import MediaEditor from '@/components/shared/MediaEditor.vue'
 import DashboardPageHeader from '@/components/shared/DashboardPageHeader.vue'
 import AppButton from '@/components/ui/AppButton.vue'
@@ -8,7 +9,7 @@ import { useSiteContentStore, type SiteContent } from '@/stores/siteContent'
 
 import { editContent } from '@/services/localizedContent'
 
-type ContentKey = Exclude<keyof SiteContent, 'selectedProjects' | 'currentResearch' | 'translations' | 'defaultLanguage'>
+type ContentKey = Exclude<keyof SiteContent, 'selectedProjects' | 'currentResearch' | 'translations' | 'defaultLanguage' | 'portraitAssetId' | 'portraitUrl'>
 interface ContentField { key: ContentKey; label: string; multiline?: boolean; help?: string }
 interface ContentSection { id: string; label: string; description: string; icon: typeof Home; fields: ContentField[] }
 
@@ -40,6 +41,7 @@ const editingLanguage = ref<'en' | 'zh'>('en')
 const editable = computed(() => editContent(store.content, editingLanguage.value))
 const activeId = ref('homepage')
 const justSaved = ref(false)
+const saveError = ref('')
 const activeSection = computed(() => sections.find((section) => section.id === activeId.value) ?? sections[0]!)
 
 function addProject() {
@@ -79,9 +81,12 @@ function normalizeCurrentResearchNumbers() {
 }
 
 async function saveChanges() {
-  await store.save()
-  justSaved.value = true
-  window.setTimeout(() => { justSaved.value = false }, 1800)
+  saveError.value = ''
+  try {
+    await store.save()
+    justSaved.value = true
+    window.setTimeout(() => { justSaved.value = false }, 1800)
+  } catch { saveError.value = 'Could not save changes. Please try again.' }
 }
 </script>
 
@@ -92,6 +97,7 @@ async function saveChanges() {
       <AppButton @click="saveChanges"><Check v-if="justSaved" :size="15" /><Save v-else :size="15" />{{ justSaved ? $t('Saved') : $t('Save changes') }}</AppButton>
     </DashboardPageHeader>
 
+    <p v-if="saveError" role="alert">{{ $t(saveError) }}</p>
     <div class="content-manager">
       <aside class="content-section-list" :aria-label="$t('Public content sections')">
         <button v-for="section in sections" :key="section.id" type="button" :class="{ active: activeId === section.id }" @click="activeId = section.id">
@@ -109,6 +115,7 @@ async function saveChanges() {
         <p v-if="activeId === 'notes'" class="manager-shortcut">{{ $t("Write notes and select homepage features in") }} <RouterLink to="/dashboard/docs">{{ $t("Documents ↗") }}</RouterLink>.</p>
         <div class="content-language-picker"><label>{{ $t('Content language') }} <select v-model="editingLanguage"><option value="en">English</option><option value="zh">中文</option></select></label><p>{{ $t('Empty fields fall back to the other language, then “-”. Links and email are shared.') }}</p></div>
         <form @submit.prevent="saveChanges">
+          <PortraitEditor v-if="activeId === 'homepage'" />
           <label v-for="field in activeSection.fields" :key="field.key">
             <span>{{ $t(field.label) }}</span>
             <textarea v-if="field.multiline" v-model="editable[field.key]" rows="3" />

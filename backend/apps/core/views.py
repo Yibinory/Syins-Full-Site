@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from apps.documents.models import Document
 from apps.papers.models import RecommendedPaper
 from apps.publications.models import Publication
-from apps.content.models import ResearchProject
+from apps.content.models import ResearchProject, SiteProfile
 
 from .models import MediaAsset, Tag
 from .serializers import MediaAssetSerializer, TagSerializer
@@ -27,7 +27,8 @@ class MediaAssetViewSet(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         asset = self.get_object()
         used = (
-            ResearchProject.objects.filter(media_asset=asset).exists()
+            SiteProfile.objects.filter(portrait_asset=asset).exists()
+            or ResearchProject.objects.filter(media_asset=asset).exists()
             or Publication.objects.filter(media_asset=asset).exists()
         )
         if used:

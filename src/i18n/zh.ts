@@ -1,4 +1,13 @@
 export default {
+  "Could not save changes. Please try again.": "保存失败，请重试。",
+  "Uploading…": "正在上传…",
+  "Expand sidebar": "展开侧栏",
+  "Homepage portrait": "首页人像",
+  "The same portrait is used in Chinese and English. Save changes to publish it.": "中英文共用同一张人像。点击保存更改后发布。",
+  "Choose an image up to 25 MB.": "请选择不超过 25 MB 的图片。",
+  "Portrait upload failed. Please try again.": "人像上传失败，请重试。",
+  "Remove portrait": "移除人像",
+
   "Online": "在线",
   "Offline": "离线",
   "A deployment change is already pending or requires recovery.": "已有待完成的部署变更，或需要先恢复。",

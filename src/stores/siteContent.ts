@@ -21,6 +21,8 @@ export interface ResearchProject {
 }
 
 export interface SiteContent {
+  portraitAssetId?: string | null
+  portraitUrl?: string
   defaultLanguage?: 'en' | 'zh'
   translations?: Record<string, Record<string, string>>
   papersHeading: string
@@ -115,10 +117,6 @@ export const useSiteContentStore = defineStore('site-content', () => {
     try {
       const response = await http.put<SiteContent>('/site/content/', content.value)
       content.value = response.data
-      lastSavedAt.value = new Date().toISOString()
-      saveLocalStorageJson('research-os:site-content', content.value)
-      localStorage.setItem('research-os:site-content-saved-at', lastSavedAt.value)
-    } catch {
       lastSavedAt.value = new Date().toISOString()
       saveLocalStorageJson('research-os:site-content', content.value)
       localStorage.setItem('research-os:site-content-saved-at', lastSavedAt.value)

@@ -6,6 +6,7 @@ from apps.core.models import MediaAsset
 
 
 class SiteProfile(models.Model):
+    portrait_asset = models.ForeignKey(MediaAsset, null=True, blank=True, on_delete=models.SET_NULL, related_name="portraits")
     translations = models.JSONField(default=dict, blank=True)
     id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
     name = models.CharField(max_length=120, default="Research Space")

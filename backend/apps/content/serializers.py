@@ -6,6 +6,12 @@ from .models import CurrentResearchItem, ResearchProject, SiteProfile
 
 
 class SiteProfileSerializer(serializers.ModelSerializer):
+    portraitAssetId = serializers.PrimaryKeyRelatedField(source="portrait_asset", queryset=MediaAsset.objects.filter(kind="image"), allow_null=True, required=False)
+    portraitUrl = serializers.SerializerMethodField()
+
+    def get_portraitUrl(self, obj):
+        return obj.portrait_asset.source_file.url if obj.portrait_asset else ""
+
     papersHeading = serializers.CharField(source="papers_heading", allow_blank=True, required=False)
     papersDescription = serializers.CharField(source="papers_description", allow_blank=True, required=False)
     toolsHeading = serializers.CharField(source="tools_heading", allow_blank=True, required=False)
@@ -27,7 +33,7 @@ class SiteProfileSerializer(serializers.ModelSerializer):
         extra_kwargs = {key: {"allow_blank": True} for key in ("name", "title")}
         model = SiteProfile
         fields = [
-            "translations", "papersHeading", "papersDescription", "toolsHeading", "toolsDescription", "name", "title", "location", "email", "headline", "bio",
+            "portraitAssetId", "portraitUrl", "translations", "papersHeading", "papersDescription", "toolsHeading", "toolsDescription", "name", "title", "location", "email", "headline", "bio",
             "researchDirections", "featuredResearchIntro", "currentResearchHeading",
             "featuredResearchHeading", "publicationsHeading", "publicationsDescription",
             "notesHeading", "notesDescription", "scholarUrl", "githubUrl", "cvUrl", "updatedAt",

@@ -45,9 +45,9 @@ function toggleLens() {
         </div>
       </div>
       <figure ref="portrait" class="portrait-wrap portrait-interactive" @pointermove="moveLens" @pointerenter="lens.visible = true" @pointerleave="lens.visible = lens.pinned" @click="toggleLens">
-        <img class="portrait-image" :src="siteContent.localized.name === 'Syins Yibinory' ? '/images/syins-yibinory-portrait-mock.png' : '/images/research-placeholder.svg'" :alt="siteContent.localized.name" />
-        <div v-if="siteContent.localized.name === 'Syins Yibinory'" class="portrait-lens" :class="{ visible: lens.visible }" :style="lensStyle" aria-hidden="true"><span>{{ $t("RESEARCH LENS") }}</span></div>
-        <span v-if="siteContent.localized.name === 'Syins Yibinory'" class="lens-instruction">{{ $t("Move to reveal the research") }}</span>
+        <img class="portrait-image" :src="siteContent.content.portraitUrl || (siteContent.content.name === 'Syins Yibinory' ? '/images/syins-yibinory-portrait-mock.png' : '/images/research-placeholder.svg')" :alt="siteContent.localized.name" />
+        <div v-if="!siteContent.content.portraitUrl && siteContent.content.name === 'Syins Yibinory'" class="portrait-lens" :class="{ visible: lens.visible }" :style="lensStyle" aria-hidden="true"><span>{{ $t("RESEARCH LENS") }}</span></div>
+        <span v-if="!siteContent.content.portraitUrl && siteContent.content.name === 'Syins Yibinory'" class="lens-instruction">{{ $t("Move to reveal the research") }}</span>
         <span class="portrait-axis">{{ $t("SUBJECT — RESEARCHER") }}</span>
         <i class="portrait-corner portrait-corner--a" /><i class="portrait-corner portrait-corner--b" />
         <figcaption><span>{{ $t("FIG. HD—01 / 2026") }}</span><span>{{ $t("Researching images in motion") }}</span></figcaption>
