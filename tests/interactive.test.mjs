@@ -65,3 +65,27 @@ await check('Imported files persist and clearing removes the stored file', async
   await deleteMedia(a.id); assert.equal(await getMedia(a.id), undefined)
 })
 console.log(`${passed} interactive import checks passed.`)
+await check('Anonymous image and HTML media load from server even without IndexedDB', async () => {
+  const previousFetch = globalThis.fetch
+  const previousDB = globalThis.indexedDB
+  globalThis.indexedDB = { open() { throw new Error('Storage disabled') } }
+  try {
+    for (const [name, kind, body] of [['figure.svg', 'image', '<svg/>'], ['demo.html', 'interactive', '<button>Explore</button>']]) {
+      const requests = []
+      globalThis.fetch = async url => {
+        requests.push(String(url))
+        return String(url).startsWith('/api/')
+          ? new Response(JSON.stringify({ id: 'public-asset', name, kind, sourceUrl: '/media/public-file' }), { status: 200 })
+          : new Response(body, { status: 200 })
+      }
+      const asset = await getMedia('public-asset')
+      assert.equal(asset.kind, kind)
+      assert.equal(await asset.source.text(), body)
+      assert.equal(requests.length, 2)
+    }
+    globalThis.fetch = async url => String(url).startsWith('/api/')
+      ? new Response(JSON.stringify({ sourceUrl: '/media/missing' }))
+      : new Response('Not found', { status: 404 })
+    assert.equal(await getMedia('missing'), undefined)
+  } finally { globalThis.fetch = previousFetch; globalThis.indexedDB = previousDB }
+})

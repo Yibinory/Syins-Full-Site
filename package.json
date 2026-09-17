@@ -3,13 +3,15 @@
   "private": true,
   "version": "0.1.0",
   "packageManager": "pnpm@11.19.0",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview --host 0.0.0.0",
-    "test": "node tests/interactive.test.mjs && node tests/workspace.test.mjs"
+    "test": "node tests/interactive.test.mjs && node tests/workspace.test.mjs && node tests/markdown.test.mjs"
   },
   "dependencies": {
     "@vue/compiler-sfc": "^3.5.42",
@@ -17,6 +19,7 @@
     "dompurify": "^3.4.15",
     "esbuild-wasm": "^0.28.2",
     "fflate": "^0.8.3",
+    "katex": "^0.18.7",
     "lucide-vue-next": "^0.544.0",
     "marked": "^18.0.12",
     "pinia": "^3.0.3",
@@ -27,12 +30,13 @@
     "@tailwindcss/vite": "^4.1.13",
     "@types/node": "^24.3.1",
     "@vitejs/plugin-vue": "^6.0.1",
+    "esbuild": "^0.28.2",
     "fake-indexeddb": "^6.2.5",
+    "jsdom": "^26.1.0",
     "linkedom": "^0.18.13",
     "tailwindcss": "^4.1.13",
     "typescript": "~5.9.2",
     "vite": "^7.1.5",
-    "vue-tsc": "^3.0.6",
-    "esbuild": "^0.28.2"
+    "vue-tsc": "^3.0.6"
   }
 }

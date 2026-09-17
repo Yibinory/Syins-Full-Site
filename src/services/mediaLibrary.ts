@@ -18,12 +18,15 @@ async function operation<T>(mode: IDBTransactionMode, fn: (store: IDBObjectStore
 function authenticatedBrowser() { return typeof window !== 'undefined' && localStorage.getItem('research-os:backend-auth') === 'true' }
 
 export async function getMedia(id: string): Promise<MediaAsset | undefined> {
-  const local = await operation<MediaAsset | undefined>('readonly', s => s.get(id))
-  if (local) return local
-  if (!authenticatedBrowser()) return undefined
+  // Browser storage may be disabled; public server media must still load.
+  try {
+    const local = await operation<MediaAsset | undefined>('readonly', s => s.get(id))
+    if (local) return local
+  } catch { /* Continue to the public media endpoint. */ }
   try {
     const { data } = await http.get<{ id: string; name: string; size: number; createdAt: string; kind: MediaAsset['kind']; contentType?: string; sourceUrl: string; renderedUrl?: string }>(`/media/${id}/`)
     const response = await fetch(data.sourceUrl)
+    if (!response.ok) return undefined
     const blob = await response.blob()
     return { id: data.id, name: data.name, size: data.size, createdAt: data.createdAt, kind: data.kind, contentType: data.contentType, source: blob, rendered: blob, sourceUrl: data.sourceUrl, renderedUrl: data.renderedUrl || data.sourceUrl }
   } catch {
